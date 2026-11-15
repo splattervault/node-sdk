@@ -1,0 +1,48 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "@splattervault/server",
+  "entryPoints": [
+    "src/index.ts"
+  ],
+  "out": "docs",
+  "tsconfig": "tsconfig.json",
+  "readme": "README.md",
+  "excludeInternal": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "includeVersion": true,
+  "sort": [
+    "source-order"
+  ],
+  "navigationLinks": {
+    "SplatterVault developers": "https://splattervault.com/developers",
+    "Studio API reference": "https://splattervault.com/docs/studio"
+  },
+  "validation": {
+    "notExported": false,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "treatWarningsAsErrors": false,
+  "blockTags": [
+    "@defaultValue",
+    "@deprecated",
+    "@example",
+    "@param",
+    "@privateRemarks",
+    "@remarks",
+    "@returns",
+    "@see",
+    "@since",
+    "@throws",
+    "@typeParam",
+    "@author",
+    "@category",
+    "@group",
+    "@module",
+    "@description",
+    "@enum",
+    "@default"
+  ]
+}

@@ -1,0 +1,74 @@
+name: CI
+
+# Actions are pinned by commit SHA (the tag in the comment); update both together.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      # Node 18 ships npm 10, which reads this lockfile; the tools used on every version support Node 18.
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      # The local API mock (tools/sdk-mock, no dependencies, fake test credentials): its own check against
+      # openapi/studio-api.json, then it serves the integration suite (test/integration.mock.test.ts) below.
+      - name: Mock self-test
+        run: node tools/sdk-mock/selftest.mjs
+      - name: Start the API mock
+        run: |
+          node tools/sdk-mock/server.mjs --port 8787 > "$RUNNER_TEMP/sdk-mock.log" 2>&1 &
+          node -e '
+            const health = "http://127.0.0.1:8787/__mock/health";
+            (async () => {
+              for (let i = 0; i < 100; i++) {
+                try { if ((await fetch(health)).ok) return; } catch {}
+                await new Promise((r) => setTimeout(r, 100));
+              }
+              console.error("the API mock did not start");
+              process.exit(1);
+            })();'
+      - name: Tests (unit + integration against the mock)
+        run: npm test
+        env:
+          SV_MOCK_URL: http://127.0.0.1:8787/rest
+      - name: The mock's request log
+        if: failure()
+        run: cat "$RUNNER_TEMP/sdk-mock.log"
+      - run: npm run build
+      - run: npm run test:smoke
+
+  lint-docs:
+    name: Lint, generated types, docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      # The committed types must be what the committed API description generates.
+      - run: npm run generate && git diff --exit-code -- src/generated
+      - run: npm run docs

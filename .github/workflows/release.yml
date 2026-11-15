@@ -1,0 +1,94 @@
+name: Release
+
+# Publishes @splattervault/server to npm when a version tag (v0.1.0, v0.2.0-beta.1, ...) is pushed.
+#
+# Three jobs, each with only the rights it needs:
+#   build    no publish rights: installs the dev tools, runs every check, packs the tarball (npm pack) and uploads it.
+#   publish  the only job that can publish (id-token: write, for npm trusted publishing over OIDC and provenance). It
+#            installs nothing and runs no package scripts: it publishes the tarball the build job made.
+#   release  creates the GitHub release (contents: write).
+#
+# One-time setup:
+#   - npmjs.com → @splattervault/server → Settings → Trusted publishing → GitHub Actions: repository
+#     splattervault/node-sdk, workflow release.yml, environment npm. No npm token is stored anywhere.
+#   - GitHub → Settings → Environments → "npm": required reviewers (at least one person), deployment branches and
+#     tags limited to the tag pattern v*. Optionally a tag ruleset so only maintainers can push v* tags.
+#
+# Actions are pinned by commit SHA (the tag in the comment); update both together.
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tarball: ${{ steps.pack.outputs.tarball }}
+      prerelease: ${{ steps.pack.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+      - run: npm ci --ignore-scripts
+      - name: The tag matches package.json
+        run: |
+          v="$(node -p 'require("./package.json").version')"
+          test "v$v" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME but package.json is $v"; exit 1; }
+      - run: npm run check
+      - id: pack
+        name: Pack
+        run: |
+          file="$(npm pack --ignore-scripts --silent)"
+          echo "tarball=$file" >> "$GITHUB_OUTPUT"
+          case "$(node -p 'require("./package.json").version')" in *-*) echo "prerelease=true" ;; *) echo "prerelease=false" ;; esac >> "$GITHUB_OUTPUT"
+          sha256sum "$file"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: package
+          path: ${{ steps.pack.outputs.tarball }}
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: npm # protected: required reviewer, v* tags only (see the setup above)
+    permissions:
+      id-token: write # npm trusted publishing (OIDC) and provenance; nothing else
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@11.6.2 --ignore-scripts
+      - name: Publish the tarball the build job made
+        env:
+          TARBALL: ${{ needs.build.outputs.tarball }}
+          PRERELEASE: ${{ needs.build.outputs.prerelease }}
+        run: |
+          tag=latest
+          if [ "$PRERELEASE" = "true" ]; then tag=next; fi
+          npm publish "./$TARBALL" --provenance --access public --tag "$tag" --ignore-scripts
+
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the GitHub release only
+    steps:
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "See CHANGELOG.md" --verify-tag

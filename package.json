@@ -1,0 +1,82 @@
+{
+  "name": "@splattervault/server",
+  "version": "0.1.0",
+  "description": "SplatterVault server SDK for Node.js: game-server sessions and pools, billing, studio player sign-in, player data, the store, and offline player-token verification. For your backend and game servers only.",
+  "license": "MIT",
+  "author": "SplatterVault",
+  "homepage": "https://splattervault.com/developers",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/splattervault/node-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/splattervault/node-sdk/issues"
+  },
+  "keywords": [
+    "splattervault",
+    "game-server",
+    "dedicated-server",
+    "matchmaking",
+    "player-auth",
+    "jwks",
+    "game-backend",
+    "sdk"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "build": "tsup && node scripts/esm-wrapper.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "lint": "eslint .",
+    "test": "vitest run --testTimeout=120000",
+    "test:watch": "vitest",
+    "test:smoke": "node scripts/smoke.mjs",
+    "mock": "node tools/sdk-mock/server.mjs --port 8787",
+    "mock:selftest": "node tools/sdk-mock/selftest.mjs",
+    "docs": "typedoc",
+    "check": "npm run typecheck && npm run lint && npm test && npm run build && npm run test:smoke",
+    "prepublishOnly": "npm run check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^18.19.130",
+    "eslint": "^10.15.0",
+    "openapi-typescript": "^7.13.0",
+    "tsup": "^8.5.1",
+    "typedoc": "^0.28.20",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.72.2",
+    "vite": "^6.4.6",
+    "vitest": "^3.2.7"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

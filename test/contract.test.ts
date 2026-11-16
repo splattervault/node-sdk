@@ -4,7 +4,8 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { OPERATIONS, SplatterVault } from "../src/index.js";
+import { HttpClient } from "../src/core/http.js";
+import { DEFAULT_RETRY, OPERATIONS, SplatterVault } from "../src/index.js";
 import { KEY, mockFetch } from "./helpers/mockFetch.js";
 import { HELPERS, NAMESPACES, SURFACE } from "./surface.js";
 
@@ -54,20 +55,30 @@ describe("contract with openapi/studio-api.json", () => {
     }
   });
 
-  it("no server operation declares If-None-Match, ETag or 304 (the SDK makes no conditional requests)", () => {
-    // If one ever does: add conditional support for it, and send "Cache-Control: max-age=0" with If-None-Match (Node's
-    // fetch adds "no-cache" to such a request, and the API then never answers 304).
-    const conditional = orgKeyOps
-      .filter((op) => {
-        const responses = (op as unknown as { responses?: Record<string, { headers?: Record<string, unknown> }> }).responses ?? {};
-        return (
-          (op.parameters ?? []).some((p) => /^if-(none-)?match$/i.test(p.name)) ||
-          "304" in responses ||
-          Object.values(responses).some((r) => Object.keys(r.headers ?? {}).some((h) => h.toLowerCase() === "etag"))
-        );
-      })
-      .map((op) => op.operationId);
-    expect(conditional).toEqual([]);
+  // Every GET documents conditional requests (Express weak ETags: If-None-Match → 304). The SDK never makes one by
+  // itself, so it never meets a 304 unless the caller sends If-None-Match (then it adds Cache-Control: max-age=0,
+  // since Node's fetch would add no-cache and no 304 would come; a 304 then rejects with status 304: methods.test.ts).
+  it("conditional requests are documented on GETs only, and the SDK sends no conditional header by itself", async () => {
+    const responsesOf = (op: SpecOperation) => (op as unknown as { responses?: Record<string, { headers?: Record<string, unknown> }> }).responses ?? {};
+    const conditional = orgKeyOps.filter(
+      (op) => (op.parameters ?? []).some((p) => /^if-(none-)?match$/i.test(p.name)) || "304" in responsesOf(op)
+    );
+    expect(conditional.length).toBeGreaterThan(0);
+    for (const op of conditional) expect({ id: op.operationId, method: op.method }).toEqual({ id: op.operationId, method: "GET" });
+
+    // Every such operation, through the SDK's own pipeline, with dummy path parameters.
+    const { fetch, calls } = mockFetch({ status: 200, body: {} });
+    const http = new HttpClient({ apiKey: KEY, baseUrl: "https://api.test/rest", fetch, timeoutMs: 1000, retry: { ...DEFAULT_RETRY, maxRetries: 0 }, userAgent: "t" });
+    for (const op of conditional) {
+      const names = [...op.path.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]!);
+      await http.call(op.operationId as keyof typeof OPERATIONS, { path: Object.fromEntries(names.map((n) => [n, "1"])) });
+    }
+    expect(calls).toHaveLength(conditional.length);
+    for (const call of calls) {
+      expect(call.headers["if-none-match"]).toBeUndefined();
+      expect(call.headers["if-match"]).toBeUndefined();
+      expect(call.headers["cache-control"]).toBeUndefined();
+    }
   });
 
   it("only GETs and documented-safe operations are retried without a condition", () => {

@@ -13,7 +13,7 @@ import type {
 
 /**
  * Credits and subscriptions. With an organization API key these are the key's organization's (the key needs a
- * permission to read them, e.g. org:view).
+ * permission to read them, e.g. org:view). Like the session routes, these never answer 429.
  */
 export class Billing {
   /** @internal */
@@ -21,7 +21,7 @@ export class Billing {
 
   /**
    * The credit balance: the organization's for an organization API key (split into subscription and purchased
-   * credits).
+   * credits). For an organization key `id` is 0 and `createdAt`, `updatedAt` and `user` are null.
    * @see GET /credits (`billing.getCredits`)
    */
   getCredits(options?: RequestOptions): Promise<CreditBalance> {

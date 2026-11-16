@@ -215,7 +215,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get organization credit balance (org-key-friendly) */
+        /**
+         * Get organization credit balance (org-key-friendly)
+         * @description An organization's credit balance and totals. An organization API key always reads its own organization (organizationId is ignored); a person (website sign-in or personal API key) names one of their organizations with organizationId (400 without it) and needs permission to see its credits there.
+         */
         get: operations["billing.getKeyOrgCredits"];
         put?: never;
         post?: never;
@@ -232,7 +235,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get organization subscription info (org-key-friendly) */
+        /**
+         * Get organization subscription info (org-key-friendly)
+         * @description Every subscription of an organization, ended ones too, newest first. An organization API key always reads its own organization (organizationId is ignored); a person (website sign-in or personal API key) names one of their organizations with organizationId (400 without it) and needs permission to see its subscription there.
+         */
         get: operations["billing.getKeyOrgSubscriptions"];
         put?: never;
         post?: never;
@@ -249,7 +255,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get organization credit balance and stats */
+        /**
+         * Get organization credit balance and stats
+         * @description The credit balance and totals of the organization orgId names. Caller: a member with permission to see its credits (website sign-in or personal API key), or that organization's own API key.
+         */
         get: operations["billing.getOrgCredits"];
         put?: never;
         post?: never;
@@ -266,7 +275,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get subscriptions */
+        /**
+         * Get subscriptions
+         * @description The subscriptions of the organization orgId names: current (the active one, else the newest; null when there is none) and all of them, newest first. Caller: a member with permission to see its subscription (website sign-in or personal API key), or that organization's own API key.
+         */
         get: operations["billing.getOrgSubscription"];
         put?: never;
         post?: never;
@@ -387,7 +399,7 @@ export interface paths {
         put?: never;
         /**
          * A new player token from a refresh token (email sign-ins)
-         * @description Body: { refreshToken }. Answers a new player token and a NEW refresh token (the old one is spent; sending it again within 30 seconds, after a lost answer, is accepted once). Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
+         * @description Body: { refreshToken }. Answers a new player token and a NEW refresh token; the old one is spent. A retry after a lost answer: for 30 seconds after the old token was first traded, it still works while the token it was traded for has never been used. Each such retry answers another new refresh token and ends the one answered before it (only the newest works). Any other reuse of a spent token, or use of a token ended that way, ends the whole sign-in (401 refresh_invalid). Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
          */
         post: operations["playerAuth.refresh"];
         delete?: never;
@@ -427,7 +439,7 @@ export interface paths {
         put?: never;
         /**
          * Email a code to add or change the signed-in player's email
-         * @description `Authorization: Bearer <player token>`. Body: { email }. Always 202. Then POST /player-auth/link/email with the code (a guest keeps its player; a player of another provider moves to a SplatterVault account). When the player already has an email and no password, a second code goes to that current address: send it as oldCode to change the email. Body { unlink: true } instead sends a code to the CURRENT address of an account without a password, the oldCode DELETE /player-auth/link/email needs. 3 link codes an hour and 10 a day per player. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
+         * @description `Authorization: Bearer <player token>`. Body: { email }. Always 202. Then POST /player-auth/link/email with the code (a guest keeps its player; a player of another provider moves to a SplatterVault account). When the player already has an email and no password, a second code goes to that current address: send it as oldCode to change the email. Body { unlink: true } instead sends a code to the CURRENT address of an account without a password: the oldCode that removing the email (POST /player-auth/link/email/remove, or DELETE /player-auth/link/email) needs. 3 link codes an hour and 10 a day per player. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
          */
         post: operations["playerAuth.requestLinkEmailCode"];
         delete?: never;
@@ -446,7 +458,7 @@ export interface paths {
         get?: never;
         /**
          * Change (or set) the signed-in player's password
-         * @description `Authorization: Bearer <player token>`. Body: { currentPassword, newPassword }. Changes a password; it never sets a first one (403 reauth_required: set it with POST /player-auth/email/code/verify, password with a code, which proves the address). 404 provider_not_enabled when the game's password sign-in is off. Every refresh token of the player stops working; answers a new one. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
+         * @description `Authorization: Bearer <player token>`. Body: { currentPassword, newPassword }. Changes a password; it never sets a first one (403 reauth_required: set it with POST /player-auth/email/code/verify, password with a code, which proves the address). A missing currentPassword is 403 reauth_required, not 400. 404 provider_not_enabled when the game's password sign-in is off. Every refresh token of the player stops working; answers a new one. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
          */
         put: operations["playerAuth.changePassword"];
         post?: never;
@@ -485,7 +497,7 @@ export interface paths {
         };
         /**
          * Public keys that sign player tokens (JWKS)
-         * @description Ed25519 keys: the current key, and during a rotation the next key (published before it signs) and the previous one. Game servers and studio backends verify player tokens offline with them: check the signature, iss = splattervault, aud = `sv-player:<your game id>`, exp. Cache it for at most 5 minutes, and re-fetch it when a token names an unknown kid. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
+         * @description Ed25519 keys: the current key, and during a rotation the next key (published before it signs) and the previous one. Game servers and studio backends verify player tokens offline with them: check the signature, iss = splattervault, aud = `sv-player:<your game id>`, exp. Cache it for at most 5 minutes, and re-fetch it when a token names an unknown kid. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. The 200 is Cache-Control: private, max-age=300; a refusal is no-store.
          */
         get: operations["playerAuth.getKeys"];
         put?: never;
@@ -777,7 +789,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Claim a warm server from a pool for a match (SDK/Quest surface — org API key reachable) */
+        /**
+         * Claim a warm server from a pool for a match (SDK/Quest surface — org API key reachable)
+         * @description Starts a session on the pool's oldest warm (idle, already booted) server and answers its ids and how to connect. Caller: a personal pool's owner; for an organization's pool, a member or an organization API key holding org:manage_pools. The pool must be active. Every 409 is PlatformError (name CONFLICT) and only its message tells them apart; none of them leaves a server claimed, so trying again shortly is safe.
+         */
         post: operations["serverPools.claim"];
         delete?: never;
         options?: never;
@@ -856,7 +871,7 @@ export interface paths {
         put?: never;
         /**
          * Buy an item with virtual currency (signed-in player)
-         * @description Body: { sku, currency, quantity? (1-100, default 1), expectedPrice (the unit price shown) }. Needs the store's player purchases switch and the item's. The price is read, the currency taken and the item given in one transaction. Send an Idempotency-Key header (1-128 visible ASCII characters) with every change: the same key and request again answers the first result with replayed: true; the same key with a different request is 409 idempotency_conflict. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
+         * @description Body: { sku, currency, quantity? (1-100, default 1), expectedPrice (the unit price shown) }. Needs the store's player purchases switch and the item's. The price is read, the currency taken and the item given in one transaction. Send an Idempotency-Key header (1-128 visible ASCII characters; missing or malformed is 400 idempotency_required) with every change: the same key and request again answers the first result with replayed: true. 409 idempotency_conflict: the same key came with a different request, or while the first request with it was still being written; re-sending the identical request after a short wait is safe. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
          */
         post: operations["store.purchase"];
         delete?: never;
@@ -876,7 +891,7 @@ export interface paths {
         put?: never;
         /**
          * Use up one of the signed-in player's items
-         * @description Body: { instanceId } (a unique item), { instanceId, quantity } (part of a stack) or { sku, quantity } (oldest first). Needs the store's player consume switch and the item's. Send an Idempotency-Key header (1-128 visible ASCII characters) with every change: the same key and request again answers the first result with replayed: true; the same key with a different request is 409 idempotency_conflict. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
+         * @description Body: { instanceId } (a unique item), { instanceId, quantity } (part of a stack) or { sku, quantity } (oldest first). Needs the store's player consume switch and the item's. Send an Idempotency-Key header (1-128 visible ASCII characters; missing or malformed is 400 idempotency_required) with every change: the same key and request again answers the first result with replayed: true. 409 idempotency_conflict: the same key came with a different request, or while the first request with it was still being written; re-sending the identical request after a short wait is safe. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
          */
         post: operations["store.consume"];
         delete?: never;
@@ -976,7 +991,7 @@ export interface paths {
         put?: never;
         /**
          * Give a player items and currency (studio backend)
-         * @description Body: { lines: [{ sku, quantity, custom? } | { currency, amount }] (1-50), reason? }. A bundle gives its contents. Currency caps and maxOwned apply. Caller: an organization API key with org:grant_economy. :player is the player's id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. Send an Idempotency-Key header (1-128 visible ASCII characters) with every change: the same key and request again answers the first result with replayed: true; the same key with a different request is 409 idempotency_conflict. 400 bad_request / idempotency_required; 404 store_not_enabled, player_not_found, item_not_found, currency_not_found, instance_not_found, txn_not_found; 409 idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible.
+         * @description Body: { lines: [{ sku, quantity, custom? } | { currency, amount }] (1-50), reason? }. A bundle gives its contents. Currency caps and maxOwned apply. Caller: an organization API key with org:grant_economy. :player is the player's id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. Send an Idempotency-Key header (1-128 visible ASCII characters; missing or malformed is 400 idempotency_required) with every change: the same key and request again answers the first result with replayed: true. 409 idempotency_conflict: the same key came with a different request, or while the first request with it was still being written; re-sending the identical request after a short wait is safe. 400 bad_request / idempotency_required; 404 store_not_enabled, player_not_found, item_not_found, currency_not_found, instance_not_found, txn_not_found; 409 idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible.
          */
         post: operations["store.studio.grant"];
         delete?: never;
@@ -996,7 +1011,7 @@ export interface paths {
         put?: never;
         /**
          * Use up or take a player's items and currency (studio backend)
-         * @description Body: { lines: [{ sku, quantity } (oldest first) | { instanceId, quantity? } | { currency, amount }] (1-50), reason? }. Never below zero. Caller: an organization API key with org:grant_economy. :player is the player's id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. Send an Idempotency-Key header (1-128 visible ASCII characters) with every change: the same key and request again answers the first result with replayed: true; the same key with a different request is 409 idempotency_conflict. 400 bad_request / idempotency_required; 404 store_not_enabled, player_not_found, item_not_found, currency_not_found, instance_not_found, txn_not_found; 409 idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible.
+         * @description Body: { lines: [{ sku, quantity } (oldest first) | { instanceId, quantity? } | { currency, amount }] (1-50), reason? }. Never below zero. Caller: an organization API key with org:grant_economy. :player is the player's id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. Send an Idempotency-Key header (1-128 visible ASCII characters; missing or malformed is 400 idempotency_required) with every change: the same key and request again answers the first result with replayed: true. 409 idempotency_conflict: the same key came with a different request, or while the first request with it was still being written; re-sending the identical request after a short wait is safe. 400 bad_request / idempotency_required; 404 store_not_enabled, player_not_found, item_not_found, currency_not_found, instance_not_found, txn_not_found; 409 idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible.
          */
         post: operations["store.studio.consume"];
         delete?: never;
@@ -1016,7 +1031,7 @@ export interface paths {
         put?: never;
         /**
          * Buy an item with a player's virtual currency (studio backend)
-         * @description Body: { sku, currency, quantity? (1-100), expectedPrice?, reason? }. The server is authoritative: the item's player switch does not apply (the store must still be on). Caller: an organization API key with org:grant_economy. :player is the player's id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. Send an Idempotency-Key header (1-128 visible ASCII characters) with every change: the same key and request again answers the first result with replayed: true; the same key with a different request is 409 idempotency_conflict. 400 bad_request / idempotency_required; 404 store_not_enabled, player_not_found, item_not_found, currency_not_found, instance_not_found, txn_not_found; 409 idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible.
+         * @description Body: { sku, currency, quantity? (1-100), expectedPrice?, reason? }. The server is authoritative: the item's player switch does not apply (the store must still be on). Caller: an organization API key with org:grant_economy. :player is the player's id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. Send an Idempotency-Key header (1-128 visible ASCII characters; missing or malformed is 400 idempotency_required) with every change: the same key and request again answers the first result with replayed: true. 409 idempotency_conflict: the same key came with a different request, or while the first request with it was still being written; re-sending the identical request after a short wait is safe. 400 bad_request / idempotency_required; 404 store_not_enabled, player_not_found, item_not_found, currency_not_found, instance_not_found, txn_not_found; 409 idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible.
          */
         post: operations["store.studio.purchase"];
         delete?: never;
@@ -1040,7 +1055,7 @@ export interface paths {
         head?: never;
         /**
          * Set the custom data of one of a player's items (studio backend)
-         * @description Body: { custom } (a JSON object of at most 1 KB, or null). :player is the player's id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. Send an Idempotency-Key header (1-128 visible ASCII characters) with every change: the same key and request again answers the first result with replayed: true; the same key with a different request is 409 idempotency_conflict. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
+         * @description Body: { custom } (a JSON object of at most 1 KB, or null). :player is the player's id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. Send an Idempotency-Key header (1-128 visible ASCII characters; missing or malformed is 400 idempotency_required) with every change: the same key and request again answers the first result with replayed: true. 409 idempotency_conflict: the same key came with a different request, or while the first request with it was still being written; re-sending the identical request after a short wait is safe. Refusals answer `{ "error": "<code>", "message": "<sentence>" }`: key on error, show message. Every answer is Cache-Control: no-store; a 429 carries Retry-After.
          */
         patch: operations["store.studio.updateItem"];
         trace?: never;
@@ -1056,7 +1071,7 @@ export interface paths {
         put?: never;
         /**
          * Reverse a player's earlier change (studio backend)
-         * @description Body: { txn (its id) | originalKey (the Idempotency-Key you sent with it), reason? }. Takes back what the player still holds and gives back what it took; what was already spent is reported in shortfall (never below zero). Once per change. Caller: an organization API key with org:grant_economy. :player is the player's id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. Send an Idempotency-Key header (1-128 visible ASCII characters) with every change: the same key and request again answers the first result with replayed: true; the same key with a different request is 409 idempotency_conflict. 400 bad_request / idempotency_required; 404 store_not_enabled, player_not_found, item_not_found, currency_not_found, instance_not_found, txn_not_found; 409 idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible.
+         * @description Body: { txn (its id) | originalKey (the Idempotency-Key you sent with it), reason? }. Takes back what the player still holds and gives back what it took; what was already spent is reported in shortfall (never below zero). Once per change. Caller: an organization API key with org:grant_economy. :player is the player's id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. Send an Idempotency-Key header (1-128 visible ASCII characters; missing or malformed is 400 idempotency_required) with every change: the same key and request again answers the first result with replayed: true. 409 idempotency_conflict: the same key came with a different request, or while the first request with it was still being written; re-sending the identical request after a short wait is safe. 400 bad_request / idempotency_required; 404 store_not_enabled, player_not_found, item_not_found, currency_not_found, instance_not_found, txn_not_found; 409 idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible.
          */
         post: operations["store.studio.reverse"];
         delete?: never;
@@ -1431,7 +1446,7 @@ export interface components {
             error: string;
             /** @description A plain sentence for people. It never carries a token, a proof or a platform's answer; do not parse it. */
             message: string;
-            /** @description Some player data refusals say more: which op, store or key (version_conflict: [{ store, key, version }]), or which limit (limit_exceeded: { limit, max }). */
+            /** @description Some refusals say more; the shape depends on the code. A refused op of a data write: { op } (its index; bad_request, key_invalid, value_invalid), { op, store, key } (an inc on a value that is not a whole number), out_of_range { op, store, key, min?, max? }, value_too_large { op, maxBytes }. Too many ops (bad_request): { maxOps }. version_conflict: [{ store, key, version }] (the current versions; null for a key that does not exist). limit_exceeded: { limit, max }. A multi-player write: { write } (bad_request: that write's player id) or { player } (player_not_found). Resolving players: { ref } (bad_request: that ref). A data import with too many rows (bad_request): { maxRows }. banned: { type, scopes }. */
             details?: unknown;
         };
         /** @description The refusal of the game-server session routes (website and Unity SDK routes), except a platform ban (PlatformBanRefusal). */
@@ -1523,7 +1538,7 @@ export interface components {
             identities: components["schemas"]["PlayerIdentity"][];
         };
         RefreshGrant: {
-            /** @description Keep it on the device: POST /player-auth/refresh trades it for a new player token. Single-use. */
+            /** @description Keep it on the device: POST /player-auth/refresh trades it for a new player token and a new refresh token. Trade it once: for 30 seconds after that it still works for a retry after a lost answer, while the token it was traded for has never been used (each such retry ends that newer token); any other reuse ends the whole sign-in. */
             refreshToken: string;
             /** Format: date-time */
             refreshExpiresAt: string;
@@ -1598,12 +1613,12 @@ export interface components {
         XsollaSignInRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
             gameKey?: string;
-            /** @description Xsolla Login project id. Needed only when the game has several apps of this kind. */
+            /** @description Xsolla Login project id, needed only when the game has several apps of this kind: at most 64 visible ASCII characters (a whole number is accepted too, as its digits). */
             appId?: string;
             /** @description The player's Xsolla Login token. */
             token: string;
@@ -1619,16 +1634,16 @@ export interface components {
         MetaSignInRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
             gameKey?: string;
-            /** @description Meta app id. Needed only when the game has several apps of this kind. */
+            /** @description Meta app id, needed only when the game has several apps of this kind: at most 64 visible ASCII characters (a whole number is accepted too, as its digits). */
             appId?: string;
-            /** @description The player's id from the Platform SDK's GetLoggedInUser. */
+            /** @description The player's id from the Platform SDK's GetLoggedInUser: 1 to 20 digits, as a string. */
             userId: string;
-            /** @description The nonce from the Platform SDK's GetUserProof (single-use). */
+            /** @description The nonce from the Platform SDK's GetUserProof (single-use): 1 to 512 characters, no control characters. */
             nonce: string;
         };
         /**
@@ -1641,14 +1656,14 @@ export interface components {
         SteamSignInRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
             gameKey?: string;
-            /** @description Steam app id. Needed only when the game has several apps of this kind. */
+            /** @description Steam app id, needed only when the game has several apps of this kind: at most 64 visible ASCII characters (a whole number is accepted too, as its digits). */
             appId?: string;
-            /** @description The Web API ticket from GetAuthTicketForWebApi("splattervault"), hex. */
+            /** @description The Web API ticket from GetAuthTicketForWebApi("splattervault"), hex: an even number of hex digits, 2 to 5120. */
             ticket: string;
         };
         /**
@@ -1661,12 +1676,12 @@ export interface components {
         PlayFabSignInRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
             gameKey?: string;
-            /** @description PlayFab title id. Needed only when the game has several apps of this kind. */
+            /** @description PlayFab title id, needed only when the game has several apps of this kind: at most 64 visible ASCII characters (a whole number is accepted too, as its digits). */
             appId?: string;
             /** @description The SessionTicket of the player's PlayFab login. */
             sessionTicket: string;
@@ -1681,12 +1696,12 @@ export interface components {
         SupabaseSignInRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
             gameKey?: string;
-            /** @description Supabase project ref. Needed only when the game has several apps of this kind. */
+            /** @description Supabase project ref, needed only when the game has several apps of this kind: at most 64 visible ASCII characters (a whole number is accepted too, as its digits). */
             appId?: string;
             /** @description The player's Supabase access token. */
             token: string;
@@ -1702,14 +1717,14 @@ export interface components {
         StudioSignInRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
             gameKey?: string;
             /** @description Your own id for the player: 1-128 visible ASCII characters. */
             externalId: string;
-            /** @description 1-64 characters; ignored when not usable. */
+            /** @description Trimmed; kept when 1-64 characters with nothing unprintable, else ignored (no name): never refused. */
             displayName?: string;
         };
         /**
@@ -1722,7 +1737,7 @@ export interface components {
         EmailCodeRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
@@ -1744,21 +1759,21 @@ export interface components {
         EmailCodeSignInRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
             gameKey?: string;
             /** Format: email */
             email: string;
-            /** @description The 8-digit code from the email. */
+            /** @description The 8-digit code from the email (spaces around it are ignored). Anything else is answered like a wrong code: 401 code_invalid, not 400. */
             code: string;
             /**
              * Format: password
              * @description Optional: becomes the account's password (a reset); its other sessions end. 8 to 72 bytes.
              */
             password?: string;
-            /** @description For a new player (when the game lets players sign up). */
+            /** @description For a new player (when the game lets players sign up). Trimmed; kept when 1-64 characters with nothing unprintable, else ignored (no name): never refused. */
             displayName?: string;
         };
         /**
@@ -1772,7 +1787,7 @@ export interface components {
         EmailPasswordSignInRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
@@ -1792,11 +1807,12 @@ export interface components {
         GuestCreateRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
             gameKey?: string;
+            /** @description Trimmed; kept when 1-64 characters with nothing unprintable, else ignored (no name): never refused. */
             displayName?: string;
         };
         /**
@@ -1809,7 +1825,7 @@ export interface components {
         GuestSignInRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
@@ -1826,11 +1842,14 @@ export interface components {
              * @description The address to add, or to change to.
              */
             email?: string;
-            /** @description True instead of email: send the code DELETE /player-auth/link/email needs (as oldCode) to the CURRENT address. */
+            /** @description True instead of email: send the code that removing the email needs (as oldCode) to the CURRENT address: POST /player-auth/link/email/remove (or DELETE /player-auth/link/email). */
             unlink?: boolean;
         };
         PlayerPasswordChange: {
-            /** Format: password */
+            /**
+             * Format: password
+             * @description Required: missing is 403 reauth_required (not 400), wrong is 401 invalid_credentials. An account without a password always gets 403 reauth_required: it sets a first one with POST /player-auth/email/code/verify (password, with a code).
+             */
             currentPassword: string;
             /**
              * Format: password
@@ -1840,15 +1859,15 @@ export interface components {
         };
         /** @description The proof of the account to link: the same fields as that provider's sign-in, without gameId / gameKey (the token names the game). Send only the provider's own fields. */
         PlayerLinkRequest: {
-            /** @description xsolla, meta, steam, playfab, supabase: the app, when the game has several of that kind. */
+            /** @description xsolla, meta, steam, playfab, supabase: the app, when the game has several of that kind: at most 64 visible ASCII characters (a whole number is accepted too, as its digits). */
             appId?: string;
             /** @description xsolla: the Xsolla Login token. supabase: the Supabase access token. */
             token?: string;
-            /** @description meta: from GetLoggedInUser. */
+            /** @description meta: from GetLoggedInUser, 1 to 20 digits as a string. */
             userId?: string;
-            /** @description meta: from GetUserProof. */
+            /** @description meta: from GetUserProof, 1 to 512 characters, no control characters. */
             nonce?: string;
-            /** @description steam: GetAuthTicketForWebApi("splattervault"), hex. */
+            /** @description steam: GetAuthTicketForWebApi("splattervault"), hex: an even number of hex digits, 2 to 5120. */
             ticket?: string;
             /** @description playfab: the PlayFab SessionTicket. */
             sessionTicket?: string;
@@ -1857,7 +1876,7 @@ export interface components {
              * @description email: the address (with code from POST /player-auth/link/email/code).
              */
             email?: string;
-            /** @description email: the code sent to the address. */
+            /** @description email: the 8-digit code sent to the address; anything else is 401 code_invalid, like a wrong code. */
             code?: string;
             /**
              * Format: password
@@ -1869,17 +1888,17 @@ export interface components {
              * @description email: changing the email of an account with a password.
              */
             currentPassword?: string;
-            /** @description email: changing the email of an account without a password (the code sent to the current address). */
+            /** @description email: changing the email of an account without a password (the code sent to the current address); missing or not 8 digits is 403 reauth_required. */
             oldCode?: string;
         };
         /** @description One of currentPassword or oldCode. */
         RemoveEmailRequest: {
             /**
              * Format: password
-             * @description When the account has a password.
+             * @description When the account has a password (missing: 403 reauth_required).
              */
             currentPassword?: string;
-            /** @description When it has none: the code POST /player-auth/link/email/code with { unlink: true } sent to the address. */
+            /** @description When it has none: the code POST /player-auth/link/email/code with { unlink: true } sent to the address (missing: 403 reauth_required; not 8 digits: 401 code_invalid, like a wrong code). */
             oldCode?: string;
         };
         /**
@@ -1904,7 +1923,7 @@ export interface components {
         PlayerImportRequest: {
             /**
              * Format: int32
-             * @description The game's id (one of gameId or gameKey).
+             * @description The game's id (one of gameId or gameKey). A JSON number; a string of its digits, such as "42", is accepted too.
              */
             gameId?: number;
             /** @description The game's key, as shown in the game console (one of gameId or gameKey). */
@@ -1937,6 +1956,7 @@ export interface components {
                 emailVerified?: boolean;
                 /** @description A bcrypt hash of the player's password. */
                 passwordHash?: string;
+                /** @description Trimmed; kept when 1-64 characters with nothing unprintable, else ignored (no name): never refused. */
                 displayName?: string;
                 /** @description Your own reference, answered back in the row's result (never stored). */
                 ref?: string;
@@ -1968,7 +1988,7 @@ export interface components {
             value?: components["schemas"]["DataValue"];
             /**
              * Format: int64
-             * @description Goes up by one on every change: send it back as ifVersion to change only what you read.
+             * @description The key's version. It goes up on every change of the key, by one or more (one counter serves every key of the player in this game, or of the game's data), and never goes back, not even when the key is deleted and set again. Send it back as ifVersion to change only what you read.
              */
             version: number;
             /** Format: date-time */
@@ -1977,7 +1997,10 @@ export interface components {
         /** @description value is left out when keysOnly is set. */
         StudioDataEntry: {
             value?: components["schemas"]["DataValue"];
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description The key's version. It goes up on every change of the key, by one or more (one counter serves every key of the player in this game, or of the game's data), and never goes back, not even when the key is deleted and set again.
+             */
             version: number;
             sizeBytes: number;
             /** Format: date-time */
@@ -2011,7 +2034,7 @@ export interface components {
              */
             op: "set";
             /**
-             * @description Only player.
+             * @description Only player. An op on readonly or internal refuses the whole request with 403 forbidden; any other value is 400 bad_request.
              * @enum {string}
              */
             store: "player";
@@ -2031,7 +2054,7 @@ export interface components {
              */
             op: "delete";
             /**
-             * @description Only player.
+             * @description Only player. An op on readonly or internal refuses the whole request with 403 forbidden; any other value is 400 bad_request.
              * @enum {string}
              */
             store: "player";
@@ -2050,7 +2073,7 @@ export interface components {
              */
             op: "inc";
             /**
-             * @description Only player.
+             * @description Only player. An op on readonly or internal refuses the whole request with 403 forbidden; any other value is 400 bad_request.
              * @enum {string}
              */
             store: "player";
@@ -2293,6 +2316,7 @@ export interface components {
              * @description Or the SplatterVault player id (exactly one of ref or playerId).
              */
             playerId?: string;
+            /** @description For a player the import creates. Trimmed; kept when 1-64 characters with nothing unprintable, else ignored (no name): never refused. */
             displayName?: string;
             /** @description Stores (player, readonly, internal), each an object of key: value. */
             data: {
@@ -2576,7 +2600,7 @@ export interface components {
             instanceId: string;
             /**
              * Format: int64
-             * @description Part of a stack (default: all of a unique item).
+             * @description Required for a stack (how many to use up); a unique item takes none or 1.
              */
             quantity?: number;
         } | {
@@ -2612,7 +2636,10 @@ export interface components {
         } | {
             /** Format: uuid */
             instanceId: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Required for a stack (how many to use up); a unique item takes none or 1.
+             */
             quantity?: number;
         } | components["schemas"]["StoreCurrencyLine"];
         StoreGrantRequest: {
@@ -2651,13 +2678,13 @@ export interface components {
             reason?: string;
         };
         MetaPurchaseSyncRequest: {
-            /** @description The Meta app (default: the token's app, else the game's only Meta app). */
+            /** @description The Meta app (default: the token's app, else the game's only Meta app): at most 64 visible ASCII characters (a whole number is accepted too, as its digits). */
             appId?: string;
         };
         StudioMetaPurchaseSyncRequest: {
-            /** @description The game the player plays. */
+            /** @description The game the player plays. A JSON number; a string of its digits, such as "42", is accepted too. */
             gameId: number;
-            /** @description The Meta app, when the game has several. */
+            /** @description The Meta app, when the game has several: at most 64 visible ASCII characters (a whole number is accepted too, as its digits). */
             appId?: string;
         };
         MetaPurchaseSyncAnswer: {
@@ -2686,7 +2713,7 @@ export interface components {
             }[];
         };
         StoreHoldingsImportRequest: {
-            /** @description One of the organization's games: new players are recorded as first seen there. */
+            /** @description One of the organization's games: new players are recorded as first seen there. A JSON number; a string of its digits, such as "42", is accepted too. */
             gameId: number;
             dryRun: boolean;
             createMissingPlayers?: boolean;
@@ -2704,6 +2731,7 @@ export interface components {
                  * @description Or the SplatterVault player id.
                  */
                 playerId?: string;
+                /** @description For a player the import creates. Trimmed; kept when 1-64 characters with nothing unprintable, else ignored (no name): never refused. */
                 displayName?: string;
                 /** @description { CODE: amount }: the player's balance in each currency. */
                 balances?: {
@@ -2884,16 +2912,24 @@ export interface components {
             /** @description null until the server is reachable. */
             connection: components["schemas"]["SessionConnection"] | null;
         };
-        /** @description The fields the Unity SDK reads; others may be present. */
+        /** @description The fields the Unity SDK reads; others may be present. An organization API key reads its organization's balance (id 0, user, createdAt and updatedAt null). */
         CreditBalance: {
+            /** @description 0 for an organization API key (the organization's balance). */
             id?: number;
             /** @description Spendable credits in all. */
             balance: number;
+            /** @description What can be spent now: adHocBalance while subscriptionCreditsFrozen, else subscriptionBalance + adHocBalance. */
+            availableBalance?: number;
             subscriptionBalance?: number;
             /** @description Purchased credits. */
             adHocBalance?: number;
             /** @description While true only adHocBalance can be spent. */
             subscriptionCreditsFrozen?: boolean;
+            /**
+             * Format: date-time
+             * @description A person's balance only.
+             */
+            graceExpiresAt?: string | null;
             isInGracePeriod?: boolean;
             totalPurchased?: number;
             totalUsed?: number;
@@ -2901,10 +2937,26 @@ export interface components {
             alertThreshold?: number;
             /** Format: date-time */
             lastAlertSent?: string | null;
-            /** Format: date-time */
-            createdAt?: string;
-            /** Format: date-time */
-            updatedAt?: string;
+            /**
+             * Format: date-time
+             * @description null for an organization API key.
+             */
+            createdAt?: string | null;
+            /**
+             * Format: date-time
+             * @description null for an organization API key.
+             */
+            updatedAt?: string | null;
+            /** @description The balance's owner; null for an organization API key. */
+            user?: {
+                id?: number;
+                email?: string;
+                displayName?: string | null;
+                firstName?: string | null;
+                lastName?: string | null;
+                profilePicture?: string | null;
+                isVerified?: boolean;
+            } | null;
         } & {
             [key: string]: unknown;
         };
@@ -3022,7 +3074,10 @@ export interface components {
     responses: never;
     parameters: never;
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description The request's id: the x-request-id you sent, else one the server made (32 hex characters). Quote it when reporting a problem; a 500 internal_error's message names it too (ref: ...). */
+        RequestId: string;
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -3030,7 +3085,10 @@ export interface operations {
     "billing.getCredits": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3039,15 +3097,29 @@ export interface operations {
             /** @description Credit balance found */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["CreditBalance"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3057,6 +3129,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3066,6 +3139,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3080,7 +3154,10 @@ export interface operations {
                 /** @description An organization's credits instead of your own. */
                 organizationId?: number;
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3089,15 +3166,29 @@ export interface operations {
             /** @description Credit statistics */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["CreditStats"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3107,6 +3198,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3116,6 +3208,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3132,7 +3225,10 @@ export interface operations {
                 /** @description Comma-separated statuses, e.g. Active,Pending. */
                 status?: string;
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3141,15 +3237,29 @@ export interface operations {
             /** @description Credit-based game sessions */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ServerSession"][];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3159,6 +3269,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3168,6 +3279,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3192,6 +3304,7 @@ export interface operations {
             /** @description Game session created */
             201: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3201,6 +3314,7 @@ export interface operations {
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3210,6 +3324,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3219,6 +3334,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3228,6 +3344,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3237,6 +3354,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3259,6 +3377,7 @@ export interface operations {
             /** @description Game session stopped */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3268,6 +3387,7 @@ export interface operations {
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3277,6 +3397,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3286,6 +3407,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3295,6 +3417,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3304,6 +3427,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3330,6 +3454,7 @@ export interface operations {
             /** @description Game session updated */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3339,6 +3464,7 @@ export interface operations {
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3348,6 +3474,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3357,6 +3484,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3366,6 +3494,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3375,6 +3504,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3401,6 +3531,7 @@ export interface operations {
             /** @description Session schedule updated */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3410,6 +3541,7 @@ export interface operations {
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3419,6 +3551,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3428,6 +3561,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3437,6 +3571,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3446,6 +3581,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3468,6 +3604,7 @@ export interface operations {
             /** @description Scheduled session canceled */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3477,6 +3614,7 @@ export interface operations {
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3486,6 +3624,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3495,6 +3634,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3504,6 +3644,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3513,6 +3654,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3529,7 +3671,10 @@ export interface operations {
                 /** @description Only this status, e.g. Active. */
                 status?: string;
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3538,15 +3683,29 @@ export interface operations {
             /** @description List of user's game sessions */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ServerSession"][];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Unauthorized - Invalid or missing token */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3556,6 +3715,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3565,6 +3725,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3579,7 +3740,10 @@ export interface operations {
                 /** @description Leave out the matches. */
                 slim?: boolean;
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path: {
                 id: number;
             };
@@ -3590,15 +3754,29 @@ export interface operations {
             /** @description Success */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ServerSession"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3608,6 +3786,7 @@ export interface operations {
             /** @description Forbidden - Not authorized to view this session. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3617,6 +3796,7 @@ export interface operations {
             /** @description Game session not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3626,6 +3806,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3637,7 +3818,10 @@ export interface operations {
     "games.getConfigurableArgs": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path: {
                 /** @description The game's key (or its id). */
                 id: string;
@@ -3649,15 +3833,29 @@ export interface operations {
             /** @description List of configurable launch arguments */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["LaunchArgument"][];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3667,6 +3865,7 @@ export interface operations {
             /** @description Game type not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3676,6 +3875,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3690,7 +3890,10 @@ export interface operations {
                 /** @description For a person: which of your organizations. */
                 organizationId?: number;
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3699,15 +3902,29 @@ export interface operations {
             /** @description The credits of the organization the API key (or organizationId) names. */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["OrgCreditStats"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3717,6 +3934,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3726,6 +3944,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3735,6 +3954,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3749,7 +3969,10 @@ export interface operations {
                 /** @description For a person: which of your organizations. */
                 organizationId?: number;
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3758,15 +3981,29 @@ export interface operations {
             /** @description Every subscription of the organization the API key names. */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["PlanSubscription"][];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3776,6 +4013,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3785,6 +4023,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3794,6 +4033,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3805,7 +4045,10 @@ export interface operations {
     "billing.getOrgCredits": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path: {
                 orgId: number;
             };
@@ -3816,15 +4059,29 @@ export interface operations {
             /** @description Success */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["OrgCreditStats"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3834,6 +4091,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3843,6 +4101,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3852,6 +4111,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3863,7 +4123,10 @@ export interface operations {
     "billing.getOrgSubscription": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path: {
                 orgId: number;
             };
@@ -3874,15 +4137,29 @@ export interface operations {
             /** @description Success */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["SubscriptionOverview"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3892,6 +4169,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3901,6 +4179,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3910,6 +4189,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3934,6 +4214,7 @@ export interface operations {
             /** @description { expiresInSeconds: 600, resendAfterSeconds: 60 }, whether or not a code was sent */
             202: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3943,6 +4224,7 @@ export interface operations {
             /** @description bad_request: not one of gameId / gameKey, or email is not a plain email address (name@example.com). */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3958,6 +4240,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3973,6 +4256,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -3988,6 +4272,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: SplatterVault email accounts (or guest accounts, or password sign-in) are not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4005,6 +4290,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4020,6 +4306,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4035,6 +4322,7 @@ export interface operations {
             /** @description email_unavailable: this server cannot send email right now. player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4065,6 +4353,7 @@ export interface operations {
             /** @description { token, expiresAt, player, identities, refreshToken, refreshExpiresAt } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4074,6 +4363,7 @@ export interface operations {
             /** @description bad_request; weak_password: 8 to 72 bytes and not the email. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4086,9 +4376,10 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
-            /** @description code_invalid: wrong, expired, used, out of attempts, or no account (and no sign-up). Also: unauthorized. */
+            /** @description code_invalid: wrong, expired, used, out of attempts, not 8 digits, or no account (and no sign-up). Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4104,6 +4395,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4119,6 +4411,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: SplatterVault email accounts (or guest accounts, or password sign-in) are not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4134,6 +4427,7 @@ export interface operations {
             /** @description identity_in_use: two sign-ups of one address at the same moment; try again. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4151,6 +4445,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4166,6 +4461,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4181,6 +4477,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4211,6 +4508,7 @@ export interface operations {
             /** @description { token, expiresAt, player, identities, refreshToken, refreshExpiresAt } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4220,6 +4518,7 @@ export interface operations {
             /** @description bad_request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4235,6 +4534,7 @@ export interface operations {
             /** @description invalid_credentials: the email or the password is not right (one answer for both). Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4250,6 +4550,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4265,6 +4566,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: SplatterVault email accounts (or guest accounts, or password sign-in) are not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4282,6 +4584,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4297,6 +4600,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4312,6 +4616,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4342,6 +4647,7 @@ export interface operations {
             /** @description { token, expiresAt, player, identities, deviceSecret } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4351,6 +4657,7 @@ export interface operations {
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4366,6 +4673,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4381,6 +4689,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4396,6 +4705,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: SplatterVault email accounts (or guest accounts, or password sign-in) are not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4413,6 +4723,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4428,6 +4739,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4443,6 +4755,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4473,6 +4786,7 @@ export interface operations {
             /** @description { token, expiresAt, player, identities } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4482,6 +4796,7 @@ export interface operations {
             /** @description bad_request: deviceSecret is not one. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4497,6 +4812,7 @@ export interface operations {
             /** @description proof_invalid: no guest has this secret (unlinked, erased, or never made). Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4512,6 +4828,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4527,6 +4844,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: SplatterVault email accounts (or guest accounts, or password sign-in) are not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4544,6 +4862,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4559,6 +4878,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4574,6 +4894,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4604,6 +4925,7 @@ export interface operations {
             /** @description { token, expiresAt, player, identities, refreshToken, refreshExpiresAt } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4613,6 +4935,7 @@ export interface operations {
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4625,9 +4948,10 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
-            /** @description refresh_invalid: unknown, expired, revoked or reused (the whole sign-in then ends), the player erased, or the game changed owner. Also: unauthorized. */
+            /** @description refresh_invalid: unknown, expired, revoked or reused outside the 30-second retry (the whole sign-in then ends), the player erased, or the game changed owner. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4643,6 +4967,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4660,6 +4985,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4675,6 +5001,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4690,6 +5017,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4720,6 +5048,7 @@ export interface operations {
             /** @description Signed out */
             204: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -4727,6 +5056,7 @@ export interface operations {
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4742,6 +5072,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4757,6 +5088,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4774,6 +5106,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4789,6 +5122,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4804,6 +5138,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4834,6 +5169,7 @@ export interface operations {
             /** @description { expiresInSeconds: 600, resendAfterSeconds: 60 } */
             202: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4843,6 +5179,7 @@ export interface operations {
             /** @description bad_request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4858,6 +5195,7 @@ export interface operations {
             /** @description token_invalid, token_expired, player_deleted Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4873,6 +5211,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4888,6 +5227,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: SplatterVault email accounts (or guest accounts, or password sign-in) are not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4905,6 +5245,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4920,6 +5261,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4935,6 +5277,7 @@ export interface operations {
             /** @description email_unavailable Also: player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4965,6 +5308,7 @@ export interface operations {
             /** @description { refreshToken, refreshExpiresAt } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4974,6 +5318,7 @@ export interface operations {
             /** @description bad_request (no email account yet); weak_password */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -4989,6 +5334,7 @@ export interface operations {
             /** @description invalid_credentials: the current password is not right. token_invalid, token_expired, player_deleted. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5001,9 +5347,10 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
-            /** @description reauth_required: send the current password; an account without one sets it with email/code/verify. Also: banned, forbidden. */
+            /** @description reauth_required: currentPassword is missing, or the account has no password (it sets a first one with email/code/verify), or the password changed meanwhile. Also: banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5016,16 +5363,17 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
-            /** @description provider_not_enabled: email accounts, or their password sign-in, are off for the game. */
+            /** @description provider_not_enabled: email accounts, or their password sign-in, are off for the game. game_not_found: the token's game is no longer active. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     /**
                      * @example {
-                     *       "error": "provider_not_enabled",
-                     *       "message": "This sign-in method is not turned on for this game."
+                     *       "error": "game_not_found",
+                     *       "message": "No such game."
                      *     }
                      */
                     "application/json": components["schemas"]["StudioError"];
@@ -5036,6 +5384,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5051,6 +5400,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5066,6 +5416,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5096,6 +5447,7 @@ export interface operations {
             /** @description The import report */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5105,6 +5457,7 @@ export interface operations {
             /** @description bad_request: the body's shape (rows are reported one by one). */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5120,6 +5473,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5135,6 +5489,7 @@ export interface operations {
             /** @description forbidden: not an organization API key holding org:import_players for the game's organization. Also: banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5150,6 +5505,7 @@ export interface operations {
             /** @description game_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5167,6 +5523,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5182,6 +5539,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5197,6 +5555,7 @@ export interface operations {
             /** @description import_busy: players of this batch were busy (signing in): send the same batch again. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5214,26 +5573,43 @@ export interface operations {
     "playerAuth.getKeys": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description JWKS: { keys: [{ kty, crv, x, kid, alg, use }] } */
+            /** @description JWKS: { keys: [{ kty, crv, x, kid, alg, use }] }; Cache-Control: private, max-age=300 */
             200: {
                 headers: {
-                    /** @description How long the answer may be kept. */
+                    /** @description `private, max-age=300`: a verifier may keep the keys 5 minutes; no shared cache (CDN, proxy) may. */
                     "Cache-Control"?: string;
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["PlayerTokenKeys"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5249,6 +5625,7 @@ export interface operations {
             /** @description banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5264,6 +5641,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5279,6 +5657,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5309,6 +5688,7 @@ export interface operations {
             /** @description Signed in: { token, expiresAt, player: { id, displayName, createdAt, newPlayer }, identities: [{ provider, linkedAt }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5318,6 +5698,7 @@ export interface operations {
             /** @description bad_request: the body is not a JSON object, not exactly one of gameId / gameKey, a malformed field, or the game has several apps of this kind and no appId says which. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5333,6 +5714,7 @@ export interface operations {
             /** @description proof_invalid: the platform did not accept the proof (a PlayFab ticket expired or unknown, a Supabase token invalid, expired or anonymous). proof_replayed: this Steam ticket or Meta nonce was already used; get a new one. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5348,6 +5730,7 @@ export interface operations {
             /** @description not_entitled: the Meta account does not own the app. publisher_banned: the Steam account (or PlayFab player) is banned from the game. family_sharing_refused: the game does not accept Steam Family Sharing. Also: forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5363,6 +5746,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: this sign-in method (or that appId) is not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5378,6 +5762,7 @@ export interface operations {
             /** @description identity_in_use: the player was erased, or someone signed in with this account, at the same moment; try again. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5395,6 +5780,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5410,6 +5796,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5425,6 +5812,7 @@ export interface operations {
             /** @description provider_unavailable: the platform could not check the proof (timeout, error, its rate limit). Retry shortly: the same Steam ticket may be sent again, but a Meta nonce is single-use at Meta, so get a new nonce. */
             502: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5440,6 +5828,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5470,6 +5859,7 @@ export interface operations {
             /** @description Signed in: { token, expiresAt, player: { id, displayName, createdAt, newPlayer }, identities: [{ provider, linkedAt }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5479,6 +5869,7 @@ export interface operations {
             /** @description bad_request: the body is not a JSON object, not exactly one of gameId / gameKey, a malformed field, or the game has several apps of this kind and no appId says which. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5494,6 +5885,7 @@ export interface operations {
             /** @description proof_invalid: the platform did not accept the proof (a PlayFab ticket expired or unknown, a Supabase token invalid, expired or anonymous). proof_replayed: this Steam ticket or Meta nonce was already used; get a new one. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5509,6 +5901,7 @@ export interface operations {
             /** @description not_entitled: the Meta account does not own the app. publisher_banned: the Steam account (or PlayFab player) is banned from the game. family_sharing_refused: the game does not accept Steam Family Sharing. Also: forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5524,6 +5917,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: this sign-in method (or that appId) is not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5539,6 +5933,7 @@ export interface operations {
             /** @description identity_in_use: the player was erased, or someone signed in with this account, at the same moment; try again. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5556,6 +5951,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5571,6 +5967,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5586,6 +5983,7 @@ export interface operations {
             /** @description provider_unavailable: the platform could not check the proof (timeout, error, its rate limit). Retry shortly: the same Steam ticket may be sent again, but a Meta nonce is single-use at Meta, so get a new nonce. */
             502: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5601,6 +5999,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5631,6 +6030,7 @@ export interface operations {
             /** @description Signed in: { token, expiresAt, player: { id, displayName, createdAt, newPlayer }, identities: [{ provider, linkedAt }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5640,6 +6040,7 @@ export interface operations {
             /** @description bad_request: the body is not a JSON object, not exactly one of gameId / gameKey, a malformed field, or the game has several apps of this kind and no appId says which. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5655,6 +6056,7 @@ export interface operations {
             /** @description proof_invalid: the platform did not accept the proof (a PlayFab ticket expired or unknown, a Supabase token invalid, expired or anonymous). proof_replayed: this Steam ticket or Meta nonce was already used; get a new one. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5670,6 +6072,7 @@ export interface operations {
             /** @description not_entitled: the Meta account does not own the app. publisher_banned: the Steam account (or PlayFab player) is banned from the game. family_sharing_refused: the game does not accept Steam Family Sharing. Also: forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5685,6 +6088,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: this sign-in method (or that appId) is not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5700,6 +6104,7 @@ export interface operations {
             /** @description identity_in_use: the player was erased, or someone signed in with this account, at the same moment; try again. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5717,6 +6122,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5732,6 +6138,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5747,6 +6154,7 @@ export interface operations {
             /** @description provider_unavailable: the platform could not check the proof (timeout, error, its rate limit). Retry shortly: the same Steam ticket may be sent again, but a Meta nonce is single-use at Meta, so get a new nonce. */
             502: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5762,6 +6170,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5792,6 +6201,7 @@ export interface operations {
             /** @description Signed in: { token, expiresAt, player: { id, displayName, createdAt, newPlayer }, identities: [{ provider, linkedAt }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5801,6 +6211,7 @@ export interface operations {
             /** @description bad_request: the body is not a JSON object, not exactly one of gameId / gameKey, a malformed field, or the game has several apps of this kind and no appId says which. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5816,6 +6227,7 @@ export interface operations {
             /** @description proof_invalid: the platform did not accept the proof (a PlayFab ticket expired or unknown, a Supabase token invalid, expired or anonymous). proof_replayed: this Steam ticket or Meta nonce was already used; get a new one. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5831,6 +6243,7 @@ export interface operations {
             /** @description not_entitled: the Meta account does not own the app. publisher_banned: the Steam account (or PlayFab player) is banned from the game. family_sharing_refused: the game does not accept Steam Family Sharing. Also: forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5846,6 +6259,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: this sign-in method (or that appId) is not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5861,6 +6275,7 @@ export interface operations {
             /** @description identity_in_use: the player was erased, or someone signed in with this account, at the same moment; try again. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5878,6 +6293,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5893,6 +6309,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5908,6 +6325,7 @@ export interface operations {
             /** @description provider_unavailable: the platform could not check the proof (timeout, error, its rate limit). Retry shortly: the same Steam ticket may be sent again, but a Meta nonce is single-use at Meta, so get a new nonce. */
             502: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5923,6 +6341,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5953,6 +6372,7 @@ export interface operations {
             /** @description Signed in: { token, expiresAt, player: { id, displayName, createdAt, newPlayer }, identities: [{ provider, linkedAt }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5962,6 +6382,7 @@ export interface operations {
             /** @description bad_request: the body is not a JSON object, not exactly one of gameId / gameKey, a malformed field, or the game has several apps of this kind and no appId says which. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5977,6 +6398,7 @@ export interface operations {
             /** @description proof_invalid: the platform did not accept the proof (a PlayFab ticket expired or unknown, a Supabase token invalid, expired or anonymous). proof_replayed: this Steam ticket or Meta nonce was already used; get a new one. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -5992,6 +6414,7 @@ export interface operations {
             /** @description not_entitled: the Meta account does not own the app. publisher_banned: the Steam account (or PlayFab player) is banned from the game. family_sharing_refused: the game does not accept Steam Family Sharing. Also: forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6007,6 +6430,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: this sign-in method (or that appId) is not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6022,6 +6446,7 @@ export interface operations {
             /** @description identity_in_use: the player was erased, or someone signed in with this account, at the same moment; try again. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6039,6 +6464,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6054,6 +6480,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6069,6 +6496,7 @@ export interface operations {
             /** @description provider_unavailable: the platform could not check the proof (timeout, error, its rate limit). Retry shortly: the same Steam ticket may be sent again, but a Meta nonce is single-use at Meta, so get a new nonce. */
             502: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6084,6 +6512,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6114,15 +6543,17 @@ export interface operations {
             /** @description Signed in: { token, expiresAt, player: { id, displayName, createdAt, newPlayer }, identities } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["PlayerSignIn"];
                 };
             };
-            /** @description bad_request: the body is not a JSON object, not exactly one of gameId / gameKey, a malformed field, or the game has several apps of this kind and no appId says which. externalId must be 1-128 visible ASCII characters. */
+            /** @description bad_request: the body is not a JSON object, not exactly one of gameId / gameKey (or a malformed one), or externalId is not 1-128 visible ASCII characters. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6138,6 +6569,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6153,6 +6585,7 @@ export interface operations {
             /** @description forbidden: not an organization API key holding org:issue_player_tokens for the game's organization, or a personal game. Also: banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6168,6 +6601,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: this sign-in method (or that appId) is not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6183,6 +6617,7 @@ export interface operations {
             /** @description identity_in_use: the player was erased, or someone signed in with this account, at the same moment; try again. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6200,6 +6635,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6215,6 +6651,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6230,6 +6667,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6259,6 +6697,7 @@ export interface operations {
             /** @description Erased */
             204: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -6266,6 +6705,7 @@ export interface operations {
             /** @description bad_request: playerId is not a player id (uuid). */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6281,6 +6721,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6296,6 +6737,7 @@ export interface operations {
             /** @description forbidden: not an organization API key holding org:issue_player_tokens. Also: banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6311,6 +6753,7 @@ export interface operations {
             /** @description player_not_found: no live player with that id among this organization's players. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6328,6 +6771,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6343,6 +6787,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6358,6 +6803,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6375,7 +6821,10 @@ export interface operations {
     "playerAuth.getMe": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -6384,15 +6833,29 @@ export interface operations {
             /** @description { player: { id, displayName, createdAt, lastSignedInAt }, game: { gameKey }, identities: [{ provider, linkedAt }] } */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["PlayerProfile"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description token_invalid: no player token, or not a valid one (or the game changed owner since it was issued). token_expired ("Token expired"): sign in again. player_deleted: the player was erased. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6408,6 +6871,7 @@ export interface operations {
             /** @description banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6425,6 +6889,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6440,6 +6905,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6455,6 +6921,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6481,6 +6948,7 @@ export interface operations {
             /** @description Erased */
             204: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -6488,6 +6956,7 @@ export interface operations {
             /** @description token_invalid: no player token, or not a valid one (or the game changed owner since it was issued). token_expired ("Token expired"): sign in again. player_deleted: the player was erased. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6503,6 +6972,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6520,6 +6990,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6535,6 +7006,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6550,6 +7022,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6582,6 +7055,7 @@ export interface operations {
             /** @description Like GET /player-auth/me */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6591,6 +7065,7 @@ export interface operations {
             /** @description bad_request: the body is not a JSON object of this route's fields, or a field is malformed. provider must be xsolla, meta, steam, playfab, supabase or email. weak_password. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6603,9 +7078,10 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
-            /** @description token_invalid: no player token, or not a valid one (or the game changed owner since it was issued). token_expired ("Token expired"): sign in again. player_deleted: the player was erased. proof_invalid: the platform did not accept the proof (a PlayFab ticket expired or unknown, a Supabase token invalid, expired or anonymous). proof_replayed: this Steam ticket or Meta nonce was already used; get a new one. code_invalid: the email code (or oldCode) is wrong, expired or used. invalid_credentials: the current password is not right. Also: unauthorized. */
+            /** @description token_invalid: no player token, or not a valid one (or the game changed owner since it was issued). token_expired ("Token expired"): sign in again. player_deleted: the player was erased. proof_invalid: the platform did not accept the proof (a PlayFab ticket expired or unknown, a Supabase token invalid, expired or anonymous). proof_replayed: this Steam ticket or Meta nonce was already used; get a new one. code_invalid: the email code (or oldCode) is wrong, expired or used, or the code is not 8 digits. invalid_credentials: the current password is not right. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6618,9 +7094,10 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
-            /** @description not_entitled: the Meta account does not own the app. publisher_banned: the Steam account (or PlayFab player) is banned from the game. family_sharing_refused: the game does not accept Steam Family Sharing. reauth_required: changing the email needs the current password or a fresh sign-in. Also: forbidden. */
+            /** @description not_entitled: the Meta account does not own the app. publisher_banned: the Steam account (or PlayFab player) is banned from the game. family_sharing_refused: the game does not accept Steam Family Sharing. reauth_required: changing the email needs currentPassword (an account with a password) or oldCode, 8 digits (one without), or the password changed meanwhile (try again). Also: forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6636,6 +7113,7 @@ export interface operations {
             /** @description game_not_found: no active game with that gameId / gameKey. provider_not_enabled: this sign-in method (or that appId) is not turned on for the game. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6651,6 +7129,7 @@ export interface operations {
             /** @description identity_in_use: another player of this studio holds that account (or email). provider_already_linked: the player already has an account of that kind. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6668,6 +7147,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6683,6 +7163,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6698,6 +7179,7 @@ export interface operations {
             /** @description provider_unavailable: the platform could not check the proof (timeout, error, its rate limit). Retry shortly: the same Steam ticket may be sent again, but a Meta nonce is single-use at Meta, so get a new nonce. */
             502: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6713,6 +7195,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6746,6 +7229,7 @@ export interface operations {
             /** @description Like GET /player-auth/me */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6755,6 +7239,7 @@ export interface operations {
             /** @description bad_request: provider is not one a player may unlink. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6767,9 +7252,10 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
-            /** @description token_invalid: no player token, or not a valid one (or the game changed owner since it was issued). token_expired ("Token expired"): sign in again. player_deleted: the player was erased. code_invalid: the oldCode is wrong, expired or used. invalid_credentials: the current password is not right. Also: unauthorized. */
+            /** @description token_invalid: no player token, or not a valid one (or the game changed owner since it was issued). token_expired ("Token expired"): sign in again. player_deleted: the player was erased. code_invalid: the oldCode is wrong, expired or used, or not 8 digits. invalid_credentials: the current password is not right. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6785,6 +7271,7 @@ export interface operations {
             /** @description reauth_required: removing the email needs currentPassword (or oldCode for an account without a password). Also: banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6797,9 +7284,26 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
+            /** @description game_not_found (removing the email): the token's game is no longer active. */
+            404: {
+                headers: {
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": "game_not_found",
+                     *       "message": "No such game."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StudioError"];
+                };
+            };
             /** @description last_identity: a player must keep at least one way to sign in. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6817,6 +7321,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6832,6 +7337,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6847,6 +7353,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6877,6 +7384,7 @@ export interface operations {
             /** @description Like GET /player-auth/me */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6886,6 +7394,7 @@ export interface operations {
             /** @description bad_request: the body is not a JSON object, or a field is malformed. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6898,9 +7407,10 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
-            /** @description token_invalid: no player token, or not a valid one (or the game changed owner since it was issued). token_expired ("Token expired"): sign in again. player_deleted: the player was erased. code_invalid: the oldCode is wrong, expired or used. invalid_credentials: the current password is not right. Also: unauthorized. */
+            /** @description token_invalid: no player token, or not a valid one (or the game changed owner since it was issued). token_expired ("Token expired"): sign in again. player_deleted: the player was erased. code_invalid: the oldCode is wrong, expired or used, or not 8 digits. invalid_credentials: the current password is not right. Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6916,6 +7426,7 @@ export interface operations {
             /** @description reauth_required: removing the email needs currentPassword (or oldCode for an account without a password). Also: banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6928,9 +7439,26 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
+            /** @description game_not_found (removing the email): the token's game is no longer active. */
+            404: {
+                headers: {
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": "game_not_found",
+                     *       "message": "No such game."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StudioError"];
+                };
+            };
             /** @description last_identity: a player must keep at least one way to sign in. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6948,6 +7476,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6963,6 +7492,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -6978,6 +7508,7 @@ export interface operations {
             /** @description player_sign_in_disabled: player sign-in is off on this server. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7002,7 +7533,10 @@ export interface operations {
                 /** @description true: versions and times without the values. */
                 keysOnly?: "true" | "false" | "1" | "0";
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -7011,15 +7545,29 @@ export interface operations {
             /** @description `{ data: { player: { <key>: { value, version, updatedAt } }, readonly: { … } } }` */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["PlayerDataAnswer"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description bad_request / key_invalid: a malformed stores or keys list (internal is never readable here) */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7035,6 +7583,7 @@ export interface operations {
             /** @description token_invalid, token_expired, player_deleted Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7050,6 +7599,7 @@ export interface operations {
             /** @description banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7065,6 +7615,7 @@ export interface operations {
             /** @description game_not_found, player_data_not_enabled */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7082,6 +7633,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7097,6 +7649,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7112,6 +7665,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7142,6 +7696,7 @@ export interface operations {
             /** @description { results: [{ store, key, version (null: deleted), value? (inc) }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7151,6 +7706,7 @@ export interface operations {
             /** @description bad_request / key_invalid / value_invalid (details: { op }) */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7166,6 +7722,7 @@ export interface operations {
             /** @description token_invalid, token_expired, player_deleted Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7178,9 +7735,10 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
-            /** @description forbidden: an op on a store other than player Also: banned. */
+            /** @description forbidden: an op on the readonly or internal store (any other store name is 400 bad_request) Also: banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7196,6 +7754,7 @@ export interface operations {
             /** @description game_not_found, player_data_not_enabled */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7211,6 +7770,7 @@ export interface operations {
             /** @description version_conflict (details: [{ store, key, version }]) / out_of_range */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7226,6 +7786,7 @@ export interface operations {
             /** @description value_too_large */
             413: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7241,6 +7802,7 @@ export interface operations {
             /** @description limit_exceeded (details: { limit, max }) */
             422: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7258,6 +7820,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7273,6 +7836,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7290,6 +7854,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7311,7 +7876,7 @@ export interface operations {
                 keys?: string;
             };
             header?: {
-                /** @description The ETag of an earlier answer: 304 with no body when nothing changed. */
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
                 "If-None-Match"?: string;
             };
             path?: never;
@@ -7322,8 +7887,9 @@ export interface operations {
             /** @description `{ data: { <key>: { value, version, updatedAt } } }`; ETag */
             200: {
                 headers: {
-                    /** @description Changes whenever a key, version or update time does. */
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
                     ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7333,15 +7899,33 @@ export interface operations {
             /** @description Not modified: If-None-Match matched the ETag. */
             304: {
                 headers: {
-                    /** @description Changes whenever a key, version or update time does. */
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
                     ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content?: never;
             };
+            /** @description key_invalid: keys is not a comma-separated list of 1 to 100 valid keys */
+            400: {
+                headers: {
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": "key_invalid",
+                     *       "message": "A key is not valid."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StudioError"];
+                };
+            };
             /** @description token_invalid, token_expired, player_deleted Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7357,6 +7941,7 @@ export interface operations {
             /** @description banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7372,6 +7957,7 @@ export interface operations {
             /** @description game_not_found, player_data_not_enabled */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7389,6 +7975,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7404,6 +7991,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7421,6 +8009,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7442,7 +8031,7 @@ export interface operations {
                 keys?: string;
             };
             header?: {
-                /** @description The ETag of an earlier answer: 304 with no body when nothing changed. */
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
                 "If-None-Match"?: string;
             };
             path: {
@@ -7456,10 +8045,11 @@ export interface operations {
             /** @description `{ data: { <key>: { value, version, updatedAt } } }`; Cache-Control: public, max-age=30; ETag */
             200: {
                 headers: {
-                    /** @description Changes whenever a key, version or update time does. */
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
                     ETag?: string;
-                    /** @description How long the answer may be kept. */
+                    /** @description `public, max-age=30`: the answer may be cached for 30 seconds. */
                     "Cache-Control"?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7469,15 +8059,33 @@ export interface operations {
             /** @description Not modified: If-None-Match matched the ETag. */
             304: {
                 headers: {
-                    /** @description Changes whenever a key, version or update time does. */
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
                     ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content?: never;
             };
+            /** @description key_invalid: keys is not a comma-separated list of 1 to 100 valid keys */
+            400: {
+                headers: {
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "error": "key_invalid",
+                     *       "message": "A key is not valid."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["StudioError"];
+                };
+            };
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7493,6 +8101,7 @@ export interface operations {
             /** @description banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7508,6 +8117,7 @@ export interface operations {
             /** @description game_not_found: no such active game, or it has no public data (player data switched off): one answer for both */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7525,6 +8135,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7540,6 +8151,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7557,6 +8169,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7589,6 +8202,7 @@ export interface operations {
             /** @description Success */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7598,6 +8212,7 @@ export interface operations {
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7607,6 +8222,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7616,6 +8232,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7625,6 +8242,17 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformError"];
+                };
+            };
+            /** @description No server was claimed. The message is one of: "No warm server available in this pool" (none is idle now); "No warm server available in this pool — retry" or "No warm server connected in this pool — retry" (the idle server could not take the session; it went back to the pool); "Pool claim is busy — retry" (another claim of this pool was running); "Pool instance was drained during claim — retry" (the server was taken out of the pool meanwhile). */
+            409: {
+                headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7634,6 +8262,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7645,7 +8274,10 @@ export interface operations {
     "store.getCatalog": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -7654,15 +8286,29 @@ export interface operations {
             /** @description { settings: { playerPurchases, playerConsume }, currencies: [{ code, name, cap }], items: [{ sku, name, kind, stackable, maxOwned, prices, contents, tags, custom, purchasable, consumable }] } */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StoreCatalog"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description token_invalid, token_expired, player_deleted Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7678,6 +8324,7 @@ export interface operations {
             /** @description banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7693,6 +8340,7 @@ export interface operations {
             /** @description store_not_enabled, game_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7710,6 +8358,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7725,6 +8374,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7740,6 +8390,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7757,7 +8408,10 @@ export interface operations {
     "store.getMine": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -7766,15 +8420,29 @@ export interface operations {
             /** @description { player: { id }, balances: [{ currency, amount }], items: [{ instanceId, sku, quantity, custom, acquiredAt }] } */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StoreHoldings"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description token_invalid, token_expired, player_deleted Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7790,6 +8458,7 @@ export interface operations {
             /** @description banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7805,6 +8474,7 @@ export interface operations {
             /** @description store_not_enabled, game_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7822,6 +8492,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7837,6 +8508,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7852,6 +8524,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7869,10 +8542,13 @@ export interface operations {
     "store.getMyHistory": {
         parameters: {
             query?: {
-                /** @description The next of the previous page: older changes. */
+                /** @description The next of the previous page: older changes. A value that is not a uuid is 400 bad_request; a uuid that is not one of this player's changes answers an empty page (200, txns [] and next null). */
                 before?: string;
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -7881,15 +8557,29 @@ export interface operations {
             /** @description { txns: [{ id, kind, createdAt, reverses, changes, shortfall }], next } */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StoreHistoryPage"];
                 };
             };
-            /** @description bad_request: before is not a txn id */
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description bad_request: before is not a uuid (a uuid that is not one of the player's changes answers an empty page, not 400) */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7905,6 +8595,7 @@ export interface operations {
             /** @description token_invalid, token_expired, player_deleted Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7920,6 +8611,7 @@ export interface operations {
             /** @description banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7935,6 +8627,7 @@ export interface operations {
             /** @description store_not_enabled, game_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7952,6 +8645,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7967,6 +8661,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7982,6 +8677,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8000,7 +8696,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine). The same key and request again answers the first result with replayed: true (200); the same key with a different request is 409 idempotency_conflict. */
+                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine); missing or malformed is 400 idempotency_required. The same key and request again answers the first result with replayed: true (200). 409 idempotency_conflict means either the same key came with a different request, or it came while the first request with that key was still being written. Re-sending the identical request after a short wait is always safe: it answers the first result (replayed: true), or makes the change once if the first never completed. */
                 "Idempotency-Key": string;
             };
             path?: never;
@@ -8015,6 +8711,7 @@ export interface operations {
             /** @description A repeat of an earlier request with the same Idempotency-Key (replayed: true). */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8024,6 +8721,7 @@ export interface operations {
             /** @description A new change. */
             201: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8033,6 +8731,7 @@ export interface operations {
             /** @description bad_request, idempotency_required */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8048,6 +8747,7 @@ export interface operations {
             /** @description token_invalid, token_expired, player_deleted Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8063,6 +8763,7 @@ export interface operations {
             /** @description purchases_disabled Also: banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8078,6 +8779,7 @@ export interface operations {
             /** @description store_not_enabled, item_not_found, currency_not_found, game_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8093,6 +8795,7 @@ export interface operations {
             /** @description insufficient_funds, price_changed, currency_cap, already_owned, inventory_full, idempotency_conflict */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8110,6 +8813,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8125,6 +8829,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8140,6 +8845,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8158,7 +8864,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine). The same key and request again answers the first result with replayed: true (200); the same key with a different request is 409 idempotency_conflict. */
+                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine); missing or malformed is 400 idempotency_required. The same key and request again answers the first result with replayed: true (200). 409 idempotency_conflict means either the same key came with a different request, or it came while the first request with that key was still being written. Re-sending the identical request after a short wait is always safe: it answers the first result (replayed: true), or makes the change once if the first never completed. */
                 "Idempotency-Key": string;
             };
             path?: never;
@@ -8173,6 +8879,7 @@ export interface operations {
             /** @description A repeat of an earlier request with the same Idempotency-Key (replayed: true). */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8182,6 +8889,7 @@ export interface operations {
             /** @description A new change. */
             201: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8191,6 +8899,7 @@ export interface operations {
             /** @description bad_request, idempotency_required */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8206,6 +8915,7 @@ export interface operations {
             /** @description token_invalid, token_expired, player_deleted Also: unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8221,6 +8931,7 @@ export interface operations {
             /** @description consume_disabled Also: banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8233,16 +8944,17 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
-            /** @description instance_not_found, item_not_found, store_not_enabled */
+            /** @description instance_not_found, item_not_found, store_not_enabled, game_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     /**
                      * @example {
-                     *       "error": "store_not_enabled",
-                     *       "message": "The store is not turned on for this game."
+                     *       "error": "game_not_found",
+                     *       "message": "No such game."
                      *     }
                      */
                     "application/json": components["schemas"]["StudioError"];
@@ -8251,6 +8963,7 @@ export interface operations {
             /** @description insufficient_items, idempotency_conflict */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8268,6 +8981,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8283,6 +8997,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8298,6 +9013,7 @@ export interface operations {
             /** @description player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8328,6 +9044,7 @@ export interface operations {
             /** @description { granted, alreadyGranted, unmapped, consumePending } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8337,6 +9054,7 @@ export interface operations {
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8352,6 +9070,7 @@ export interface operations {
             /** @description unauthorized, token_invalid, token_expired, player_deleted. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8367,6 +9086,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8379,16 +9099,17 @@ export interface operations {
                     "application/json": components["schemas"]["StudioError"];
                 };
             };
-            /** @description store_not_enabled, provider_not_enabled */
+            /** @description store_not_enabled, provider_not_enabled, game_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     /**
                      * @example {
-                     *       "error": "provider_not_enabled",
-                     *       "message": "This sign-in method is not turned on for this game."
+                     *       "error": "game_not_found",
+                     *       "message": "No such game."
                      *     }
                      */
                     "application/json": components["schemas"]["StudioError"];
@@ -8397,6 +9118,7 @@ export interface operations {
             /** @description meta_not_linked */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8414,6 +9136,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8429,6 +9152,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8444,6 +9168,7 @@ export interface operations {
             /** @description provider_unavailable */
             502: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8459,6 +9184,7 @@ export interface operations {
             /** @description platform_not_available Also: player_sign_in_disabled. */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8476,7 +9202,10 @@ export interface operations {
     "store.studio.getCatalog": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -8485,15 +9214,29 @@ export interface operations {
             /** @description { settings, currencies: [{ code, name, cap, status, updatedAt }], items: [{ sku, name, kind, stackable, maxOwned, playerPurchasable, playerConsumable, prices, contents, tags, custom, importRefs, status, updatedAt }] } */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StudioStoreCatalog"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8509,6 +9252,7 @@ export interface operations {
             /** @description forbidden Also: banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8524,6 +9268,7 @@ export interface operations {
             /** @description store_not_enabled */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8541,6 +9286,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8556,6 +9302,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8573,7 +9320,10 @@ export interface operations {
     "store.studio.getPlayer": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path: {
                 /** @description The player's SplatterVault id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. */
                 player: string;
@@ -8585,15 +9335,29 @@ export interface operations {
             /** @description { player: { id }, balances, items } */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StoreHoldings"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8609,6 +9373,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8624,6 +9389,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8639,6 +9405,7 @@ export interface operations {
             /** @description player_not_found, store_not_enabled */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8656,6 +9423,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8671,6 +9439,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8688,10 +9457,13 @@ export interface operations {
     "store.studio.getPlayerHistory": {
         parameters: {
             query?: {
-                /** @description The next of the previous page: older changes. */
+                /** @description The next of the previous page: older changes. A value that is not a uuid is 400 bad_request; a uuid that is not one of this player's changes answers an empty page (200, txns [] and next null). */
                 before?: string;
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path: {
                 /** @description The player's SplatterVault id (uuid), or another system's id for the player, URL-encoded: `xsolla:<Login project id>:<user id>`, `playfab:<title id>:<PlayFabId>`, `supabase:<project ref>:<user id>`, `steam:<SteamID>`, `meta:<org-scoped id>`, `studio:<your id>`. */
                 player: string;
@@ -8703,15 +9475,29 @@ export interface operations {
             /** @description { txns: [{ id, kind, createdAt, reverses, changes, shortfall, actorType, reason }], next } */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StoreHistoryPage"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8727,6 +9513,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8742,6 +9529,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8757,6 +9545,7 @@ export interface operations {
             /** @description player_not_found, store_not_enabled */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8774,6 +9563,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8789,6 +9579,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8807,7 +9598,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine). The same key and request again answers the first result with replayed: true (200); the same key with a different request is 409 idempotency_conflict. */
+                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine); missing or malformed is 400 idempotency_required. The same key and request again answers the first result with replayed: true (200). 409 idempotency_conflict means either the same key came with a different request, or it came while the first request with that key was still being written. Re-sending the identical request after a short wait is always safe: it answers the first result (replayed: true), or makes the change once if the first never completed. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -8825,6 +9616,7 @@ export interface operations {
             /** @description A repeat of an earlier request with the same Idempotency-Key (replayed: true). */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8834,15 +9626,17 @@ export interface operations {
             /** @description A new change. */
             201: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StoreTxnResult"];
                 };
             };
-            /** @description bad_request (a malformed body or :player), idempotency_required */
+            /** @description bad_request (a malformed body or :player), idempotency_required (the Idempotency-Key header is missing or malformed) */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8858,6 +9652,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8873,6 +9668,7 @@ export interface operations {
             /** @description forbidden: not an organization API key holding org:grant_economy Also: banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8888,6 +9684,7 @@ export interface operations {
             /** @description player_not_found, store_not_enabled, item_not_found, currency_not_found, instance_not_found, txn_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8903,6 +9700,7 @@ export interface operations {
             /** @description idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8920,6 +9718,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8935,6 +9734,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8953,7 +9753,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine). The same key and request again answers the first result with replayed: true (200); the same key with a different request is 409 idempotency_conflict. */
+                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine); missing or malformed is 400 idempotency_required. The same key and request again answers the first result with replayed: true (200). 409 idempotency_conflict means either the same key came with a different request, or it came while the first request with that key was still being written. Re-sending the identical request after a short wait is always safe: it answers the first result (replayed: true), or makes the change once if the first never completed. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -8971,6 +9771,7 @@ export interface operations {
             /** @description A repeat of an earlier request with the same Idempotency-Key (replayed: true). */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -8980,15 +9781,17 @@ export interface operations {
             /** @description A new change. */
             201: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StoreTxnResult"];
                 };
             };
-            /** @description bad_request (a malformed body or :player), idempotency_required */
+            /** @description bad_request (a malformed body or :player), idempotency_required (the Idempotency-Key header is missing or malformed) */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9004,6 +9807,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9019,6 +9823,7 @@ export interface operations {
             /** @description forbidden: not an organization API key holding org:grant_economy Also: banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9034,6 +9839,7 @@ export interface operations {
             /** @description player_not_found, store_not_enabled, item_not_found, currency_not_found, instance_not_found, txn_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9049,6 +9855,7 @@ export interface operations {
             /** @description idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9066,6 +9873,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9081,6 +9889,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9099,7 +9908,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine). The same key and request again answers the first result with replayed: true (200); the same key with a different request is 409 idempotency_conflict. */
+                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine); missing or malformed is 400 idempotency_required. The same key and request again answers the first result with replayed: true (200). 409 idempotency_conflict means either the same key came with a different request, or it came while the first request with that key was still being written. Re-sending the identical request after a short wait is always safe: it answers the first result (replayed: true), or makes the change once if the first never completed. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -9117,6 +9926,7 @@ export interface operations {
             /** @description A repeat of an earlier request with the same Idempotency-Key (replayed: true). */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9126,15 +9936,17 @@ export interface operations {
             /** @description A new change. */
             201: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StoreTxnResult"];
                 };
             };
-            /** @description bad_request (a malformed body or :player), idempotency_required */
+            /** @description bad_request (a malformed body or :player), idempotency_required (the Idempotency-Key header is missing or malformed) */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9150,6 +9962,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9165,6 +9978,7 @@ export interface operations {
             /** @description forbidden: not an organization API key holding org:grant_economy Also: banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9180,6 +9994,7 @@ export interface operations {
             /** @description player_not_found, store_not_enabled, item_not_found, currency_not_found, instance_not_found, txn_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9195,6 +10010,7 @@ export interface operations {
             /** @description idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9212,6 +10028,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9227,6 +10044,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9245,7 +10063,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine). The same key and request again answers the first result with replayed: true (200); the same key with a different request is 409 idempotency_conflict. */
+                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine); missing or malformed is 400 idempotency_required. The same key and request again answers the first result with replayed: true (200). 409 idempotency_conflict means either the same key came with a different request, or it came while the first request with that key was still being written. Re-sending the identical request after a short wait is always safe: it answers the first result (replayed: true), or makes the change once if the first never completed. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -9265,6 +10083,7 @@ export interface operations {
             /** @description A repeat of an earlier request with the same Idempotency-Key (replayed: true). */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9274,15 +10093,17 @@ export interface operations {
             /** @description A new change. */
             201: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StoreTxnResult"];
                 };
             };
-            /** @description bad_request (a malformed body or :player), idempotency_required */
+            /** @description bad_request (a malformed body or :player), idempotency_required (the Idempotency-Key header is missing or malformed) */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9298,6 +10119,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9313,6 +10135,7 @@ export interface operations {
             /** @description forbidden: not an organization API key holding org:grant_economy Also: banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9328,6 +10151,7 @@ export interface operations {
             /** @description player_not_found, store_not_enabled, item_not_found, currency_not_found, instance_not_found, txn_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9343,6 +10167,7 @@ export interface operations {
             /** @description idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9360,6 +10185,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9375,6 +10201,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9393,7 +10220,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine). The same key and request again answers the first result with replayed: true (200); the same key with a different request is 409 idempotency_conflict. */
+                /** @description 1-128 visible ASCII characters, unique per change (a uuid is fine); missing or malformed is 400 idempotency_required. The same key and request again answers the first result with replayed: true (200). 409 idempotency_conflict means either the same key came with a different request, or it came while the first request with that key was still being written. Re-sending the identical request after a short wait is always safe: it answers the first result (replayed: true), or makes the change once if the first never completed. */
                 "Idempotency-Key": string;
             };
             path: {
@@ -9411,6 +10238,7 @@ export interface operations {
             /** @description A repeat of an earlier request with the same Idempotency-Key (replayed: true). */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9420,15 +10248,17 @@ export interface operations {
             /** @description A new change. */
             201: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StoreTxnResult"];
                 };
             };
-            /** @description bad_request (a malformed body or :player), idempotency_required */
+            /** @description bad_request (a malformed body or :player), idempotency_required (the Idempotency-Key header is missing or malformed) */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9444,6 +10274,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9459,6 +10290,7 @@ export interface operations {
             /** @description forbidden: not an organization API key holding org:grant_economy Also: banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9474,6 +10306,7 @@ export interface operations {
             /** @description player_not_found, store_not_enabled, item_not_found, currency_not_found, instance_not_found, txn_not_found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9489,6 +10322,7 @@ export interface operations {
             /** @description idempotency_conflict, insufficient_funds, insufficient_items, currency_cap, already_owned, inventory_full, price_changed, already_reversed, not_reversible */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9506,6 +10340,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9521,6 +10356,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9554,6 +10390,7 @@ export interface operations {
             /** @description { granted, alreadyGranted, unmapped, consumePending } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9563,6 +10400,7 @@ export interface operations {
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9578,6 +10416,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9593,6 +10432,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9608,6 +10448,7 @@ export interface operations {
             /** @description player_not_found, store_not_enabled, game_not_found, provider_not_enabled. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9623,6 +10464,7 @@ export interface operations {
             /** @description meta_not_linked */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9640,6 +10482,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9655,6 +10498,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9670,6 +10514,7 @@ export interface operations {
             /** @description provider_unavailable. */
             502: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9685,6 +10530,7 @@ export interface operations {
             /** @description platform_not_available */
             503: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9715,6 +10561,7 @@ export interface operations {
             /** @description { dryRun, counts: { rows, created, updated, unchanged, conflict, invalid }, results: [{ line, status, sku?, currency?, message? }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9724,6 +10571,7 @@ export interface operations {
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9739,6 +10587,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9754,6 +10603,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9771,6 +10621,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9786,6 +10637,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9816,6 +10668,7 @@ export interface operations {
             /** @description { dryRun, counts, results: [{ line, status, playerId?, message? }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9825,6 +10678,7 @@ export interface operations {
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9840,6 +10694,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9855,6 +10710,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9870,6 +10726,7 @@ export interface operations {
             /** @description game_not_found. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9887,6 +10744,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9902,6 +10760,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9935,6 +10794,7 @@ export interface operations {
             /** @description { players: [{ index, id }] }: id null when no live player of this game holds it */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9944,6 +10804,7 @@ export interface operations {
             /** @description bad_request: refs is not a list of 1 to 100 refs, or a ref is malformed */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9959,6 +10820,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9974,6 +10836,7 @@ export interface operations {
             /** @description forbidden: not an organization API key with the permission Also: banned. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -9989,6 +10852,7 @@ export interface operations {
             /** @description game_not_found: not a game of the key's organization */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10006,6 +10870,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10021,6 +10886,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10038,6 +10904,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10062,7 +10929,10 @@ export interface operations {
                 /** @description true: versions and times without the values. */
                 keysOnly?: "true" | "false" | "1" | "0";
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path: {
                 /** @description The game's id (one of your organization's games). */
                 gameId: string;
@@ -10076,15 +10946,29 @@ export interface operations {
             /** @description `{ data: { player: { <key>: { value, version, sizeBytes, updatedAt, updatedBy } }, readonly: {…}, internal: {…} } }` */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StudioPlayerDataAnswer"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description bad_request, key_invalid. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10100,6 +10984,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10115,6 +11000,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10130,6 +11016,7 @@ export interface operations {
             /** @description game_not_found, player_not_found, player_data_not_enabled */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10147,6 +11034,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10162,6 +11050,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10193,6 +11082,7 @@ export interface operations {
             /** @description Deleted (or there was nothing) */
             204: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content?: never;
@@ -10200,6 +11090,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10215,6 +11106,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10230,6 +11122,7 @@ export interface operations {
             /** @description game_not_found, player_not_found, player_data_not_enabled */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10247,6 +11140,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10262,6 +11156,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10279,6 +11174,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10314,6 +11210,7 @@ export interface operations {
             /** @description { results: [{ store, key, version (null: deleted), value? (inc) }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10323,6 +11220,7 @@ export interface operations {
             /** @description bad_request / key_invalid / value_invalid (details: { op }) */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10338,6 +11236,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10353,6 +11252,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10368,6 +11268,7 @@ export interface operations {
             /** @description game_not_found, player_not_found, player_data_not_enabled. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10383,6 +11284,7 @@ export interface operations {
             /** @description version_conflict (details: [{ store, key, version }]) / out_of_range */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10398,6 +11300,7 @@ export interface operations {
             /** @description value_too_large */
             413: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10413,6 +11316,7 @@ export interface operations {
             /** @description limit_exceeded (details: { limit, max }) */
             422: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10430,6 +11334,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10445,6 +11350,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10462,6 +11368,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10495,6 +11402,7 @@ export interface operations {
             /** @description `{ players: { <player id>: { player: {…}, readonly: {…}, internal: {…} } }, notFound: [<player id>] }` */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10504,6 +11412,7 @@ export interface operations {
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10519,6 +11428,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10534,6 +11444,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10549,6 +11460,7 @@ export interface operations {
             /** @description game_not_found, player_data_not_enabled. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10564,6 +11476,7 @@ export interface operations {
             /** @description limit_exceeded (details { limit: answer_bytes, max }): the answer would pass 8 MiB; ask for fewer players or keys */
             422: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10581,6 +11494,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10596,6 +11510,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10613,6 +11528,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10646,6 +11562,7 @@ export interface operations {
             /** @description { results: [{ player, results: [{ store, key, version, value? }] }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10655,6 +11572,7 @@ export interface operations {
             /** @description bad_request, key_invalid, value_invalid. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10670,6 +11588,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10685,6 +11604,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10700,6 +11620,7 @@ export interface operations {
             /** @description player_not_found: one of the players (nothing was written) Also: game_not_found, player_data_not_enabled. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10715,6 +11636,7 @@ export interface operations {
             /** @description version_conflict, out_of_range. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10730,6 +11652,7 @@ export interface operations {
             /** @description value_too_large. */
             413: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10745,6 +11668,7 @@ export interface operations {
             /** @description limit_exceeded. */
             422: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10762,6 +11686,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10777,6 +11702,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10794,6 +11720,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10818,7 +11745,10 @@ export interface operations {
                 /** @description true: versions and times without the values. */
                 keysOnly?: "true" | "false" | "1" | "0";
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path: {
                 /** @description The game's id (one of your organization's games). */
                 gameId: string;
@@ -10830,15 +11760,29 @@ export interface operations {
             /** @description `{ data: { public: { <key>: { value, version, sizeBytes, updatedAt, updatedBy } }, internal: {…} } }` */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["StudioGameDataAnswer"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description bad_request, key_invalid. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10854,6 +11798,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10869,6 +11814,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10884,6 +11830,7 @@ export interface operations {
             /** @description game_not_found, player_data_not_enabled. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10901,6 +11848,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10916,6 +11864,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10933,6 +11882,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10966,6 +11916,7 @@ export interface operations {
             /** @description { results: [{ store, key, version }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10975,6 +11926,7 @@ export interface operations {
             /** @description bad_request, key_invalid, value_invalid. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -10990,6 +11942,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11005,6 +11958,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11020,6 +11974,7 @@ export interface operations {
             /** @description game_not_found, player_data_not_enabled. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11035,6 +11990,7 @@ export interface operations {
             /** @description version_conflict. */
             409: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11050,6 +12006,7 @@ export interface operations {
             /** @description value_too_large. */
             413: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11065,6 +12022,7 @@ export interface operations {
             /** @description limit_exceeded. */
             422: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11082,6 +12040,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11097,6 +12056,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11114,6 +12074,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11147,6 +12108,7 @@ export interface operations {
             /** @description { importId, dryRun, counts: { rows, created, updated, unchanged, conflict, invalid }, results: [{ line, status, playerId?, message? }] } */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11156,6 +12118,7 @@ export interface operations {
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11171,6 +12134,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11186,6 +12150,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11201,6 +12166,7 @@ export interface operations {
             /** @description game_not_found, player_data_not_enabled. */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11218,6 +12184,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11233,6 +12200,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11250,6 +12218,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11272,7 +12241,10 @@ export interface operations {
                 /** @description The next of the previous answer. */
                 cursor?: string;
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -11281,15 +12253,29 @@ export interface operations {
             /** @description { players: [{ id, erasedAt }], next, until, more }: next is ALWAYS set (pass it back as cursor), until is the database time up to which every erase is final, more is true when the page was full (call again now) */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ErasedPlayersPage"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description bad_request. */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11305,6 +12291,7 @@ export interface operations {
             /** @description unauthorized. */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11320,6 +12307,7 @@ export interface operations {
             /** @description banned, forbidden. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11337,6 +12325,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11352,6 +12341,7 @@ export interface operations {
             /** @description internal_error. */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11369,6 +12359,7 @@ export interface operations {
                 headers: {
                     /** @description Seconds to wait before trying again. */
                     "Retry-After"?: number;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11388,7 +12379,10 @@ export interface operations {
             query?: {
                 includeStripeHistory?: boolean;
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -11397,15 +12391,29 @@ export interface operations {
             /** @description Subscription details */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["SubscriptionOverview"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11415,6 +12423,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11424,6 +12433,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11440,7 +12450,10 @@ export interface operations {
                 /** @description Comma-separated statuses, e.g. Active,Pending. */
                 status?: string;
             };
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -11449,15 +12462,29 @@ export interface operations {
             /** @description User game sessions */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["ServerSession"][];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11467,6 +12494,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11476,6 +12504,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11500,6 +12529,7 @@ export interface operations {
             /** @description Game session created */
             201: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11509,6 +12539,7 @@ export interface operations {
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11518,6 +12549,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11527,6 +12559,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11536,6 +12569,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11545,6 +12579,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11556,7 +12591,10 @@ export interface operations {
     "billing.getUsage": {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The ETag of an earlier answer of this route: 304 with no body when the answer is unchanged. Send it with `Cache-Control: max-age=0`, not `no-cache`: a request that says no-cache always gets the full answer, and Node's fetch adds `Cache-Control: no-cache` to any request with If-None-Match unless you set Cache-Control yourself. */
+                "If-None-Match"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -11565,15 +12603,29 @@ export interface operations {
             /** @description Usage statistics */
             200: {
                 headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["UsageStats"];
                 };
             };
+            /** @description Not modified: If-None-Match matched the ETag. */
+            304: {
+                headers: {
+                    /** @description A weak ETag (W/"..."): it changes whenever the answer does. Send it back as If-None-Match, with Cache-Control: max-age=0, for a 304 with no body while nothing changed. */
+                    ETag?: string;
+                    "x-request-id": components["headers"]["RequestId"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11583,6 +12635,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11592,6 +12645,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11614,6 +12668,7 @@ export interface operations {
             /** @description Game session stopped */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11623,6 +12678,7 @@ export interface operations {
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11632,6 +12688,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11641,6 +12698,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11650,6 +12708,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11659,6 +12718,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11685,6 +12745,7 @@ export interface operations {
             /** @description Game session updated */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11694,6 +12755,7 @@ export interface operations {
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11703,6 +12765,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11712,6 +12775,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11721,6 +12785,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11730,6 +12795,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11756,6 +12822,7 @@ export interface operations {
             /** @description Session schedule updated */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11765,6 +12832,7 @@ export interface operations {
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11774,6 +12842,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11783,6 +12852,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11792,6 +12862,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11801,6 +12872,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11823,6 +12895,7 @@ export interface operations {
             /** @description Scheduled session canceled */
             200: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11832,6 +12905,7 @@ export interface operations {
             /** @description Bad request */
             400: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11841,6 +12915,7 @@ export interface operations {
             /** @description Not signed in, or the credential is not valid */
             401: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11850,6 +12925,7 @@ export interface operations {
             /** @description Not allowed. A platform ban answers PlatformBanRefusal (banned: true) instead. */
             403: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11859,6 +12935,7 @@ export interface operations {
             /** @description Not found */
             404: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -11868,6 +12945,7 @@ export interface operations {
             /** @description Server error */
             500: {
                 headers: {
+                    "x-request-id": components["headers"]["RequestId"];
                     [name: string]: unknown;
                 };
                 content: {

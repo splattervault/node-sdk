@@ -50,10 +50,12 @@ export { PlayerData, type DataReadQuery, type ErasedPlayersQuery, type GameId } 
 export { Players } from "./resources/players.js";
 export {
   Games,
+  poolClaimConflict,
   ServerPools,
   Sessions,
   SessionWaitError,
   SubscriptionSessions,
+  type PoolClaimConflict,
   type ReadySession,
   type SessionId,
   type SessionWaitErrorCode,

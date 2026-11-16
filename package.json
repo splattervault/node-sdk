@@ -1,6 +1,6 @@
 {
   "name": "@splattervault/server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "SplatterVault server SDK for Node.js: game-server sessions and pools, billing, studio player sign-in, player data, the store, and offline player-token verification. For your backend and game servers only.",
   "license": "MIT",
   "author": "SplatterVault",

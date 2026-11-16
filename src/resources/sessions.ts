@@ -152,6 +152,9 @@ export class SubscriptionSessions {
 /**
  * Game-server sessions: dedicated servers SplatterVault starts for your matches, billed in credits (your
  * organization's credits with an organization API key, which also fills in `organizationId`).
+ *
+ * These routes refuse in the platform's shape (`code` null; `errorName` such as `CONFLICT` and the HTTP status tell
+ * what happened) and set no rate limit of their own: they never answer 429.
  */
 export class Sessions {
   /** Subscription-billed sessions. */
@@ -297,6 +300,39 @@ export class Sessions {
   }
 }
 
+/**
+ * What a `409` from {@link ServerPools.claim} means (see {@link poolClaimConflict}):
+ * - `"no_warm_server"`: no server of the pool is idle now. Start one with `sessions.create()` instead, or wait.
+ * - `"busy"`: the claim met a moment of contention (another claim of the pool was running, the idle server could not
+ *   take the session or was drained meanwhile). Nothing was claimed: trying the claim again shortly is safe.
+ */
+export type PoolClaimConflict = "no_warm_server" | "busy";
+
+/**
+ * Tells the two kinds of `409` from {@link ServerPools.claim} apart, or answers null for any other error. The API
+ * answers every claim conflict as `{ name: "CONFLICT", message }` and documents that only the message tells them apart:
+ * "No warm server available in this pool" (none idle) versus the messages that end in "— retry" ("Pool claim is busy
+ * — retry", "No warm server connected in this pool — retry", …). An unknown 409 message counts as `"no_warm_server"`
+ * (the safe reading: fall back instead of claiming in a loop).
+ *
+ * ```ts
+ * try {
+ *   return await sv.serverPools.claim(poolId, { mode: "Ranked" });
+ * } catch (err) {
+ *   const conflict = poolClaimConflict(err);
+ *   if (conflict === "busy") return await sv.serverPools.claim(poolId, { mode: "Ranked" }); // once, after a moment
+ *   if (conflict === "no_warm_server") return await startNewSession();
+ *   throw err;
+ * }
+ * ```
+ */
+export function poolClaimConflict(err: unknown): PoolClaimConflict | null {
+  if (!(err instanceof SplatterVaultError) || err.status !== 409 || err.operationId !== "serverPools.claim") return null;
+  const body = err.body as { message?: unknown } | undefined;
+  const message = typeof body?.message === "string" ? body.message : "";
+  return /\bretry\s*[.!]?\s*$/i.test(message) ? "busy" : "no_warm_server";
+}
+
 /** Warm server pools: servers already running, claimed for a match in seconds. */
 export class ServerPools {
   /** @internal */
@@ -304,8 +340,11 @@ export class ServerPools {
 
   /**
    * Claims a warm server from pool `poolId` for a match: answers the new session's id, the pool instance and its
-   * `connection` (null until reachable). Needs a key holding org:manage_pools. Never retried by the SDK: a repeat
-   * would claim a second server.
+   * `connection` (null until reachable). Needs a key holding org:manage_pools (with an organization API key).
+   *
+   * Never retried by the SDK: a repeat after a lost answer could claim a second server. A `409` claimed nothing:
+   * {@link poolClaimConflict} says whether no server is idle (`"no_warm_server"`: start a session instead) or the
+   * claim met contention (`"busy"`: you may try again shortly). Like every session route it never answers 429.
    * @see POST /server-pools/{id}/claim (`serverPools.claim`)
    */
   claim(poolId: number | string, body?: PoolClaimRequest, options?: RequestOptions): Promise<PoolClaimAnswer> {

@@ -4,7 +4,36 @@ All notable changes to `@splattervault/server` are listed here. The format follo
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the package uses [semantic versioning](https://semver.org/);
 while it is 0.x, a minor version may change the API.
 
-## [0.1.0] - Unreleased (preview)
+## [0.1.1] - 2026-11-15
+
+Follows the corrected Studio API description (API main c002ca7f, https://splattervault.com/docs/studio/swagger.json).
+
+### Added
+
+- `poolClaimConflict(err)`: tells a `serverPools.claim` 409 apart by the API's message: `"no_warm_server"` (none idle:
+  start a session instead) or `"busy"` (the "— retry" messages: contention; trying the claim again shortly is safe;
+  nothing was claimed). The SDK still never retries a claim itself (it starts servers). The README and
+  `examples/match-server.ts` show the fallback.
+
+### Changed (types, from the API description)
+
+- `CreditBalance`: `createdAt` and `updatedAt` are now `string | null` (an organization API key's answer has null
+  dates); new fields `availableBalance`, `graceExpiresAt` (`string | null`) and `user` (an object, or null; null for
+  an organization key). Code that assigned `createdAt` to a non-null `string` must now handle null. The SDK itself
+  never reads these fields.
+- Every GET operation's parameters now list an optional `If-None-Match` header, and its answers `ETag`, `304` and
+  `x-request-id` headers (`components["headers"]["RequestId"]`); `serverPools.claim` lists its `409` answer. Request
+  and answer bodies are unchanged apart from `CreditBalance`.
+
+### Documentation
+
+- The game-server session and billing routes never answer 429 (the API sets no rate limit on them): said so in the
+  README and on `Sessions` / `Billing`; only the studio routes answer `429 rate_limited`.
+- Conditional requests: every GET documents ETags, but the SDK never sends `If-None-Match` itself, so it never meets
+  a 304; if you send one in `headers`, it adds `Cache-Control: max-age=0` and a 304 rejects with status 304 (as in
+  0.1.0). The contract test now checks exactly that instead of "no operation documents ETags".
+
+## [0.1.0] - 2026-11-15 (preview)
 
 The first release: the Studio API's server operations (organization API key) for Node.js 18 and later.
 

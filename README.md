@@ -60,17 +60,24 @@ Claim a warm server from one of your pools (it is already running: seconds), or 
 minute):
 
 ```ts
-import { SplatterVault, SplatterVaultError } from "@splattervault/server";
+import { poolClaimConflict, SplatterVault } from "@splattervault/server";
 
 const sv = new SplatterVault();
 
 async function serverForMatch(matchId: string) {
-  try {
-    const claim = await sv.serverPools.claim(12, { friendlyName: `Match ${matchId}`, mode: "Ranked" });
-    return claim; // { sessionId, serverInstanceId, connection: { host, primaryPort, code, ... } | null }
-  } catch (err) {
-    // 409: no warm server free right now: start a new one instead.
-    if (!(err instanceof SplatterVaultError) || err.status !== 409) throw err;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const claim = await sv.serverPools.claim(12, { friendlyName: `Match ${matchId}`, mode: "Ranked" });
+      return claim; // { sessionId, serverInstanceId, connection: { host, primaryPort, code, ... } | null }
+    } catch (err) {
+      const conflict = poolClaimConflict(err); // a 409 claimed nothing; null for any other error
+      if (conflict === "busy" && attempt === 1) {
+        await new Promise((r) => setTimeout(r, 1000)); // contention: one more try shortly
+        continue;
+      }
+      if (conflict === null) throw err;
+      break; // "no_warm_server" (or still busy): start a new one instead
+    }
   }
   const session = await sv.sessions.create({
     gameTypeConfigKey: "my-game",
@@ -95,6 +102,11 @@ says it is ready (`ready: true`; a game with no ready signal is returned once it
 
 Creating a session, stopping one and claiming a pool server are **never retried by the SDK** (a repeat could start or
 claim a second server). After a network error, look for the session with `sv.sessions.list()` before trying again.
+
+A claim's `409` claims nothing, and the API tells its kinds apart only by the message: `poolClaimConflict(err)`
+answers `"no_warm_server"` ("No warm server available in this pool": start a session instead) or `"busy"` (the
+messages ending in "— retry": another claim was running, or the idle server could not take the session; trying the
+claim again shortly is safe), and null for any other error.
 
 ### Verify a player's token on your game server
 
@@ -239,6 +251,10 @@ try {
 `err.is("rate_limited")`, `err.isTransient` (408, 429, 500, 502, 503, 504 or no answer) and `err.isNetworkError` help too. Each
 operation's codes are listed in the [Studio API reference](https://splattervault.com/docs/studio).
 
+Rate limits: the studio routes (player sign-in, player data, the store) answer `429 rate_limited` with `Retry-After`
+when a key or a player sends too much. The game-server session and billing routes set no rate limit of their own:
+they never answer 429 (their transient failures are 500, 502, 503, 504 or no answer).
+
 ## Retries, timeouts and cancellation
 
 The SDK sends a request again by itself only when that is **safe**, and only after a transient failure: no answer
@@ -311,7 +327,7 @@ claiming match's; `mode`, `serverName` and `friendlyName` are from when the pool
 | `sv.playerData` | `resolve`, `get`, `update`, `clear`, `getMany`, `writeMany`, `getGameData`, `updateGameData`, `import`, `listErasedPlayers`, `erasedPlayerPages` |
 | `sv.store` | `getCatalog`, `getPlayer`, `getHistory`, `historyPages`, `grant`, `consume`, `purchase`, `updateItem`, `reverse`, `syncMetaPurchases`, `importCatalog`, `importHoldings` |
 | `sv` | `verifyPlayerToken` |
-| functions | `verifyPlayerToken`, `createPlayerTokenVerifier`, `readSessionEnvironment`, `newIdempotencyKey` |
+| functions | `verifyPlayerToken`, `createPlayerTokenVerifier`, `readSessionEnvironment`, `newIdempotencyKey`, `poolClaimConflict` |
 
 Each method's documentation names its API operation (`@see POST /store/studio/players/{player}/grants`). Request and
 answer types (`ServerSession`, `StoreTxnResult`, `DataOp`, …) are exported, generated from the API's OpenAPI

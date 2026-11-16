@@ -3387,48 +3387,105 @@
         "properties": {
           "host": {
             "type": "string",
+            "description": "The address players connect to (a host name or an IP address).",
             "nullable": true
           },
           "primaryPort": {
             "type": "integer",
-            "nullable": true
+            "description": "The port players join on. A game launched with the server's room port ({{slavePort}} or {{port}} in a launch argument, as games built on the SplatterVault SDKs are): the session's slavePort, null until the server has started the room. Any other game: its configured \"game\" port (Minecraft Java 25565, Valheim 2456, ...). Null when neither is known.",
+            "nullable": true,
+            "example": 25565
+          },
+          "ports": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "label",
+                "port"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "The port id from the game config, e.g. \"game\", \"query\" or \"rcon\"."
+                },
+                "label": {
+                  "type": "string"
+                },
+                "port": {
+                  "type": "integer"
+                },
+                "protocol": {
+                  "type": "string",
+                  "description": "\"tcp\", \"udp\" or \"both\"."
+                }
+              }
+            },
+            "description": "Every port the game shows to players. For a game launched with the room port, the \"game\" entry carries primaryPort and is left out while primaryPort is null."
           },
           "password": {
             "type": "string",
+            "description": "The password players type to join (the session code), or null.",
             "nullable": true
           },
           "code": {
             "type": "string",
+            "description": "The session's join code.",
             "nullable": true
           },
           "serverName": {
             "type": "string",
+            "description": "The server's name, for games where players find it in an in-game list.",
             "nullable": true
           },
           "connectionMode": {
             "type": "string",
+            "description": "How players join: \"direct_ip\", \"launch_url\", \"server_browser\" or \"code_only\".",
             "nullable": true
           },
           "launchUrl": {
             "type": "string",
+            "description": "A link that starts the game client straight into this server, or null.",
             "nullable": true
           },
           "showHost": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether to show host and port to players."
           },
           "showPassword": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether to show the password or code to players."
           },
           "version": {
             "type": "string",
+            "description": "The game build's version, when known.",
             "nullable": true
           },
           "platform": {
             "type": "string",
+            "description": "The platform hint from the game's connection instructions, when set.",
             "nullable": true
+          },
+          "instructions": {
+            "type": "object",
+            "properties": {
+              "summary": {
+                "type": "string",
+                "nullable": true
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "nullable": true,
+            "description": "The game's connection instructions with the live values filled in, or null."
           }
         },
-        "description": "How players join the server, as the game's owner set it up.",
+        "description": "How players join the server, as the game's owner set it up. Connect players to host and primaryPort (not to slaveIp and slavePort: slavePort is the server's room port, which only games launched with {{slavePort}} listen on).",
         "additionalProperties": true
       },
       "ServerSession": {
@@ -3497,6 +3554,7 @@
           },
           "slavePort": {
             "type": "integer",
+            "description": "The room port the server gave this session (8100 and up), once the server has started the room. Only games launched with {{slavePort}} in their launch arguments listen on it: connect players with connection.primaryPort.",
             "nullable": true
           },
           "createdById": {
@@ -3559,7 +3617,8 @@
                 "$ref": "#/components/schemas/SessionConnection"
               }
             ],
-            "nullable": true
+            "nullable": true,
+            "description": "How players join: host and the port they join on (primaryPort). Null until the server has an address."
           },
           "ready": {
             "type": "boolean",
@@ -3617,7 +3676,8 @@
             "format": "date-time"
           },
           "serverSizeId": {
-            "type": "integer"
+            "type": "integer",
+            "description": "One of the game's server sizes (the game's default when left out). A size whose disk is smaller than the game's server image is refused with 400 before anything is created or charged: it could never start the game."
           },
           "organizationId": {
             "type": "integer",
@@ -3775,7 +3835,7 @@
               }
             ],
             "nullable": true,
-            "description": "null until the server is reachable."
+            "description": "Null until the server is reachable. For a game launched with the room port ({{slavePort}}), primaryPort is null here: the server has not started the room yet. Wait until the session is ready, then read it from GET /game-sessions/{id}."
           }
         }
       },
@@ -5622,7 +5682,7 @@
             }
           }
         },
-        "description": "Returns detailed information about a specific game session. Users can view their own sessions or any session with the appropriate permission.",
+        "description": "Returns detailed information about a specific game session, with `connection`: how players join it (host and the port they join on). Users can view their own sessions or any session with the appropriate permission.",
         "summary": "Get a game session by ID",
         "operationId": "sessions.get",
         "tags": [
@@ -5676,7 +5736,7 @@
           {
             "lang": "TypeScript",
             "label": "TypeScript (@splattervault/server)",
-            "source": "// GET /game-sessions/1234 with @splattervault/server 0.1 (preview), Node.js 18+, on your backend only: never in a game build.\nimport { SplatterVault } from \"@splattervault/server\";\n\nconst sv = new SplatterVault({ apiKey: process.env.SV_API_KEY }); // an organization key, from your server's secrets\nconst session = await sv.sessions.get(sessionId);\n// status Active: the server is up; ready: the game said it is ready for players (readyAt, readyDeadlineAt).\nif (session.status === \"Active\") console.log(session.connection); // how players connect"
+            "source": "// GET /game-sessions/1234 with @splattervault/server 0.1 (preview), Node.js 18+, on your backend only: never in a game build.\nimport { SplatterVault } from \"@splattervault/server\";\n\nconst sv = new SplatterVault({ apiKey: process.env.SV_API_KEY }); // an organization key, from your server's secrets\nconst session = await sv.sessions.get(sessionId);\n// status Active: the server is up; ready: the game said it is ready for players (readyAt, readyDeadlineAt).\n// Players join on connection.host and connection.primaryPort (slavePort is the server's room port, not always the game's).\nif (session.status === \"Active\" && session.connection) console.log(session.connection.host, session.connection.primaryPort);"
           }
         ]
       }
@@ -13238,7 +13298,7 @@
           {
             "lang": "TypeScript",
             "label": "TypeScript (@splattervault/server)",
-            "source": "// POST /server-pools/12/claim with @splattervault/server 0.1 (preview), Node.js 18+, on your backend only: never in a game build.\nimport { SplatterVault, SplatterVaultError } from \"@splattervault/server\";\n\nconst sv = new SplatterVault({ apiKey: process.env.SV_API_KEY }); // an organization key, from your server's secrets\ntry {\n  const { sessionId, connection } = await sv.serverPools.claim(12, { friendlyName: \"Ranked 12\", mode: \"Ranked\" });\n} catch (err) {\n  // 409: no warm server free right now: start a new session instead. Never retried by the SDK (a second server).\n  if (!(err instanceof SplatterVaultError) || err.status !== 409) throw err;\n}"
+            "source": "// POST /server-pools/12/claim with @splattervault/server 0.1 (preview), Node.js 18+, on your backend only: never in a game build.\nimport { SplatterVault, SplatterVaultError } from \"@splattervault/server\";\n\nconst sv = new SplatterVault({ apiKey: process.env.SV_API_KEY }); // an organization key, from your server's secrets\ntry {\n  const { sessionId, connection } = await sv.serverPools.claim(12, { friendlyName: \"Ranked 12\", mode: \"Ranked\" });\n  // A game launched with {{slavePort}} has no connection.primaryPort yet: the server has not started the room.\n  const ready = await sv.sessions.waitUntilReady(sessionId); // ready.connection.primaryPort: the port players join on\n} catch (err) {\n  // 409: no warm server free right now: start a new session instead. Never retried by the SDK (a second server).\n  if (!(err instanceof SplatterVaultError) || err.status !== 409) throw err;\n}"
           }
         ]
       }

@@ -13,10 +13,15 @@
  * | `FRIENDLY_NAME` | the session's friendly name              | set when the pool server booted                       |
  * | `GAME_TYPE`     | the game type                            | the game type                                         |
  * | `BUILD_CHANNEL` | the build channel name, when there is one | the build channel name, when there is one            |
- * | `SLAVE_PORT`    | the base game port, when set             | the base game port, when set                          |
+ * | `SLAVE_PORT`    | not set on SplatterVault servers today   | not set on SplatterVault servers today                |
  *
  * Your game's own variables (`GAME_TYPE_ENV_*` as configured in the console, and channel overrides) are passed
  * too, under the names you gave them.
+ *
+ * **Which port to listen on.** SplatterVault servers do not set `SLAVE_PORT` today, so `slavePort` is null there:
+ * bind the port your launch arguments give the game. `{{slavePort}}` (or `{{port}}`) in a launch argument is the
+ * room port the server leased for this session (8100 and up); `{{gamePort}}` is the game's configured "game" port.
+ * Players are told that same port as the session's `connection.primaryPort`.
  */
 export interface SessionEnvironment {
   /** True when the variables look like a SplatterVault game server's (`GAME_TYPE` and `CODE` are set). */
@@ -35,7 +40,10 @@ export interface SessionEnvironment {
   friendlyName: string | null;
   /** The build channel name, or null. */
   buildChannel: string | null;
-  /** The base game port, or null when the wrapper did not set one. */
+  /**
+   * `SLAVE_PORT`, or null when it is not set. SplatterVault servers do not set it today, so this is null there: bind
+   * the port your launch arguments give the game (`{{slavePort}}` or `{{port}}` for the session's room port).
+   */
   slavePort: number | null;
 }
 

@@ -184,7 +184,9 @@ export class Sessions {
   }
 
   /**
-   * One session with its connection details. `{ slim: true }` leaves out its matches.
+   * One session with its connection details: `connection.host` and `connection.primaryPort`, the port players join on
+   * (null until it is known). `slavePort` is the room port the server gave the session, which only games launched with
+   * `{{slavePort}}` or `{{port}}` listen on. `{ slim: true }` leaves out its matches.
    * @see GET /game-sessions/{id} (`sessions.get`)
    */
   get(sessionId: SessionId, query?: GetSessionQuery, options?: RequestOptions): Promise<ServerSession> {
@@ -340,7 +342,10 @@ export class ServerPools {
 
   /**
    * Claims a warm server from pool `poolId` for a match: answers the new session's id, the pool instance and its
-   * `connection` (null until reachable). Needs a key holding org:manage_pools (with an organization API key).
+   * `connection` (null until reachable). For a game launched with the room port (`{{slavePort}}` or `{{port}}`),
+   * `connection.primaryPort` is null in this answer, because the server starts the room after the claim: wait with
+   * {@link Sessions.waitUntilReady} and use the session's `connection`. Needs a key holding org:manage_pools (with an
+   * organization API key).
    *
    * Never retried by the SDK: a repeat after a lost answer could claim a second server. A `409` claimed nothing:
    * {@link poolClaimConflict} says whether no server is idle (`"no_warm_server"`: start a session instead) or the

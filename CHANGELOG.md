@@ -4,6 +4,31 @@ All notable changes to `@splattervault/server` are listed here. The format follo
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the package uses [semantic versioning](https://semver.org/);
 while it is 0.x, a minor version may change the API.
 
+## [0.1.2] - 2026-11-16
+
+Where players join a session. Types and documentation only: no code change, and nothing that worked before changes.
+
+### Changed (types, from the API description)
+
+- `SessionConnection` lists `ports` (`{ id, label, port, protocol? }[]`) and `instructions` (`{ summary?, steps? } | null`),
+  which the API already sent, and every field has a description. `primaryPort` is the port players join on: the
+  session's room port for a game launched with `{{slavePort}}` or `{{port}}` in a launch argument (null until the
+  server has started the room), otherwise the game's configured "game" port (for example 25565 for Minecraft Java).
+- `ServerSession.slavePort` is described as the room port the server gave the session (8100 and up), which only
+  games launched with `{{slavePort}}` listen on; `ServerSession.connection` and `PoolClaimAnswer.connection` say
+  when they are null. `sessions.get` (`GET /game-sessions/{id}`, also with `slim`) answers `connection`.
+
+### Documentation
+
+- README and `examples/match-server.ts`: a pool claim's `connection.primaryPort` is null for a game launched with the
+  room port (the server starts the room after the claim), so the examples wait with `sessions.waitUntilReady` and
+  read the session's `connection` unless the claim answer already has the port. Send players to `connection.host` and
+  `connection.primaryPort`, not `slaveIp` and `slavePort`.
+- `readSessionEnvironment()`: SplatterVault servers do not set `SLAVE_PORT` today, so `slavePort` is null there; a
+  game server listens on the port its launch arguments give it (`{{slavePort}}` / `{{port}}` for the session's room
+  port, `{{gamePort}}` for the game's configured port). The docs used to call it "the base game port".
+- `sessions.get` and `serverPools.claim` doc comments say the same.
+
 ## [0.1.1] - 2026-11-15
 
 Follows the corrected Studio API description (API main c002ca7f, https://splattervault.com/docs/studio/swagger.json).

@@ -68,7 +68,12 @@ async function serverForMatch(matchId: string) {
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const claim = await sv.serverPools.claim(12, { friendlyName: `Match ${matchId}`, mode: "Ranked" });
-      return claim; // { sessionId, serverInstanceId, connection: { host, primaryPort, code, ... } | null }
+      // { sessionId, serverInstanceId, connection: { host, primaryPort, code, ... } | null }. primaryPort is the port
+      // players join on. For a game launched with the room port ({{slavePort}}) it is null in the claim answer: the
+      // server starts the room after the claim, so wait for the session and read its connection.
+      if (claim.connection?.primaryPort != null) return { sessionId: claim.sessionId, connection: claim.connection };
+      const claimed = await sv.sessions.waitUntilReady(claim.sessionId);
+      return { sessionId: claimed.id, connection: claimed.connection ?? null };
     } catch (err) {
       const conflict = poolClaimConflict(err); // a 409 claimed nothing; null for any other error
       if (conflict === "busy" && attempt === 1) {
@@ -89,6 +94,8 @@ async function serverForMatch(matchId: string) {
   const ready = await sv.sessions.waitUntilReady(session.id);
   return { sessionId: ready.id, connection: ready.connection ?? null };
 }
+// Send players to connection.host and connection.primaryPort. Not slaveIp and slavePort: slavePort is the room port
+// the server gave the session, which only games launched with {{slavePort}} or {{port}} listen on.
 
 // When the match is over:
 const { totalCost } = await sv.sessions.stop(sessionId); // credits billed for this session
@@ -313,6 +320,11 @@ const env = readSessionEnvironment(); // reads process.env
 On a server of its own (a session you created), `sessionId` is the session's id. On a **pool** server `sessionId` is
 null (the claim does not set it: use the `sessionId` that `serverPools.claim()` answered) and only `code` is the
 claiming match's; `mode`, `serverName` and `friendlyName` are from when the pool server booted.
+
+SplatterVault servers do not set `SLAVE_PORT` today, so `slavePort` is null there. Listen on the port your launch
+arguments give the game: `{{slavePort}}` (or `{{port}}`) is the room port the server leased for the session, and
+`{{gamePort}}` is the game's configured port. Players are told that same port as the session's
+`connection.primaryPort`.
 
 ## API
 

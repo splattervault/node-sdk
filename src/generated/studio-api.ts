@@ -177,7 +177,7 @@ export interface paths {
         };
         /**
          * Get a game session by ID
-         * @description Returns detailed information about a specific game session. Users can view their own sessions or any session with the appropriate permission.
+         * @description Returns detailed information about a specific game session, with `connection`: how players join it (host and the port they join on). Users can view their own sessions or any session with the appropriate permission.
          */
         get: operations["sessions.get"];
         put?: never;
@@ -2758,19 +2758,47 @@ export interface components {
                 message?: string;
             }[];
         };
-        /** @description How players join the server, as the game's owner set it up. */
+        /** @description How players join the server, as the game's owner set it up. Connect players to host and primaryPort (not to slaveIp and slavePort: slavePort is the server's room port, which only games launched with {{slavePort}} listen on). */
         SessionConnection: {
+            /** @description The address players connect to (a host name or an IP address). */
             host?: string | null;
+            /**
+             * @description The port players join on. A game launched with the server's room port ({{slavePort}} or {{port}} in a launch argument, as games built on the SplatterVault SDKs are): the session's slavePort, null until the server has started the room. Any other game: its configured "game" port (Minecraft Java 25565, Valheim 2456, ...). Null when neither is known.
+             * @example 25565
+             */
             primaryPort?: number | null;
+            /** @description Every port the game shows to players. For a game launched with the room port, the "game" entry carries primaryPort and is left out while primaryPort is null. */
+            ports?: {
+                /** @description The port id from the game config, e.g. "game", "query" or "rcon". */
+                id: string;
+                label: string;
+                port: number;
+                /** @description "tcp", "udp" or "both". */
+                protocol?: string;
+            }[];
+            /** @description The password players type to join (the session code), or null. */
             password?: string | null;
+            /** @description The session's join code. */
             code?: string | null;
+            /** @description The server's name, for games where players find it in an in-game list. */
             serverName?: string | null;
+            /** @description How players join: "direct_ip", "launch_url", "server_browser" or "code_only". */
             connectionMode?: string | null;
+            /** @description A link that starts the game client straight into this server, or null. */
             launchUrl?: string | null;
+            /** @description Whether to show host and port to players. */
             showHost?: boolean;
+            /** @description Whether to show the password or code to players. */
             showPassword?: boolean;
+            /** @description The game build's version, when known. */
             version?: string | null;
+            /** @description The platform hint from the game's connection instructions, when set. */
             platform?: string | null;
+            /** @description The game's connection instructions with the live values filled in, or null. */
+            instructions?: {
+                summary?: string | null;
+                steps?: string[];
+            } | null;
         } & {
             [key: string]: unknown;
         };
@@ -2799,6 +2827,7 @@ export interface components {
             serverStoppedAt?: string | null;
             /** @description The server's address, once it is up. */
             slaveIp?: string | null;
+            /** @description The room port the server gave this session (8100 and up), once the server has started the room. Only games launched with {{slavePort}} in their launch arguments listen on it: connect players with connection.primaryPort. */
             slavePort?: number | null;
             createdById?: number | null;
             /** @example Credit */
@@ -2820,6 +2849,7 @@ export interface components {
             } & {
                 [key: string]: unknown;
             }) | null;
+            /** @description How players join: host and the port they join on (primaryPort). Null until the server has an address. */
             connection?: components["schemas"]["SessionConnection"] | null;
             /** @description True once readyAt is set: the game server has said it is ready for players at least once (its ready signal, or the start of a match). It stays true after the session stops. */
             ready?: boolean;
@@ -2858,6 +2888,7 @@ export interface components {
             scheduledStartTime?: string;
             /** Format: date-time */
             scheduledEndTime?: string;
+            /** @description One of the game's server sizes (the game's default when left out). A size whose disk is smaller than the game's server image is refused with 400 before anything is created or charged: it could never start the game. */
             serverSizeId?: number;
             /** @description Bill the organization (an organization API key fills it in). */
             organizationId?: number;
@@ -2909,7 +2940,7 @@ export interface components {
         PoolClaimAnswer: {
             sessionId: number;
             serverInstanceId: number;
-            /** @description null until the server is reachable. */
+            /** @description Null until the server is reachable. For a game launched with the room port ({{slavePort}}), primaryPort is null here: the server has not started the room yet. Wait until the session is ready, then read it from GET /game-sessions/{id}. */
             connection: components["schemas"]["SessionConnection"] | null;
         };
         /** @description The fields the Unity SDK reads; others may be present. An organization API key reads its organization's balance (id 0, user, createdAt and updatedAt null). */

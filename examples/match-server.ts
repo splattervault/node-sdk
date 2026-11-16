@@ -12,7 +12,9 @@ async function serverForMatch(matchId: string): Promise<{ sessionId: number; con
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const claim = await sv.serverPools.claim(poolId, { friendlyName: `Match ${matchId}`, mode: "Ranked" });
-        if (claim.connection) return { sessionId: claim.sessionId, connection: claim.connection };
+        // primaryPort is the port players join on. A game launched with the room port ({{slavePort}}) has none in
+        // the claim answer (the server starts the room after the claim): wait for the session and read it.
+        if (claim.connection?.primaryPort != null) return { sessionId: claim.sessionId, connection: claim.connection };
         return { sessionId: claim.sessionId, connection: await waitForConnection(claim.sessionId) };
       } catch (err) {
         // A 409 claimed nothing. "busy" (another claim was running, or the idle server could not take the session):
@@ -42,6 +44,8 @@ async function waitForConnection(sessionId: number): Promise<SessionConnection> 
   // Polls until the game says it is ready (or rejects: SessionWaitError session_ended / wait_timeout).
   const session = await sv.sessions.waitUntilReady(sessionId, { timeoutMs: 180_000 });
   if (!session.connection) throw new Error(`session ${sessionId} is ready but has no connection details`);
+  // Players join on connection.host and connection.primaryPort, not slaveIp and slavePort (slavePort is the room
+  // port the server gave the session, which only games launched with {{slavePort}} or {{port}} listen on).
   return session.connection;
 }
 

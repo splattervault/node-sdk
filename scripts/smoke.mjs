@@ -10,7 +10,10 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
-const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, stdio: ["ignore", "pipe", "inherit"], encoding: "utf8" });
+// `npm publish --dry-run` runs this through prepublishOnly with npm_config_dry_run set, which would make the inner
+// `npm pack` write no tarball: the smoke test always packs and installs for real, into its own temp folder.
+const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => k.toLowerCase() !== "npm_config_dry_run"));
+const run = (cmd, args, cwd) => execFileSync(cmd, args, { cwd, env, stdio: ["ignore", "pipe", "inherit"], encoding: "utf8" });
 
 const work = mkdtempSync(join(tmpdir(), "sv-node-sdk-smoke-"));
 const [packed] = JSON.parse(run(npm, ["pack", "--json", "--pack-destination", work], root));
